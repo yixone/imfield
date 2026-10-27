@@ -1,0 +1,17 @@
+[package]
+name = "imfield-domains"
+version = "0.1.0"
+edition.workspace = true
+
+[features]
+serde = ["dep:serde", "chrono/serde", "imfield-snowflake/serde"]
+sqlx = ["dep:sqlx", "imfield-snowflake/sqlx"]
+
+[dependencies]
+# Workspace
+imfield-snowflake.workspace = true
+
+# Extern
+chrono = { workspace = true }
+serde = { workspace = true, features = ["derive"], optional = true }
+sqlx = { workspace = true, features = ["chrono"], optional = true }

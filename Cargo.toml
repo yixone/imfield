@@ -1,0 +1,17 @@
+[workspace]
+resolver = "2"
+members = ["crates/domains", "crates/snowflake"]
+
+[workspace.package]
+edition = "2024"
+
+[workspace.dependencies]
+# Internal
+imfield-domains.path = "crates/domains"
+imfield-snowflake.path = "crates/snowflake"
+
+# Extern
+base64 = "0.23.1"
+chrono = "0.4.42"
+serde = "1.0.219"
+sqlx = "0.8.5"
