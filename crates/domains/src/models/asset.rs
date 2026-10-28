@@ -12,6 +12,15 @@ use crate::{
     utils::constrains,
 };
 
+/// Maximum permitted length for an asset name
+const MAX_ASSET_TITLE_LEN: usize = 128;
+
+/// Maximum permitted length for an asset caption
+const MAX_ASSET_CAPTION_LEN: usize = 1024;
+
+/// Maximum permitted length for the original asset filename
+const MAX_ASSET_ORIGINAL_FILENAME_LEN: usize = 255;
+
 /// Asset entity
 ///
 /// An asset is the core entity in `imfield`,
@@ -38,7 +47,7 @@ pub struct AssetEntity {
     /// Asset description
     pub(crate) caption: Option<String>,
     /// The source from which the asset was obtained
-    pub(crate) source: Option<AssetSource>,
+    pub(crate) source_url: Option<Url>,
 
     /// Asset lifecycle state
     pub(crate) state: AssetState,
@@ -60,7 +69,54 @@ pub struct AssetEntity {
     pub(crate) deleted_at: Option<DateTime<Utc>>,
 }
 
+/// Data required to create an [`AssetEntity`]
+pub struct NewAssetData {
+    pub title: Option<String>,
+    pub caption: Option<String>,
+    pub source_url: Option<Url>,
+
+    pub checksum: Sha256Checksum,
+
+    pub parent_id: Option<AssetId>,
+    pub duplicate_of: Option<AssetId>,
+}
+
 impl AssetEntity {
+    pub fn new(id: AssetId, data: NewAssetData) -> Result<Self, DomainError> {
+        if let Some(title) = &data.title {
+            constrains::ensure_str_len(title, MAX_ASSET_TITLE_LEN)?;
+        }
+        if let Some(caption) = &data.caption {
+            constrains::ensure_str_len(caption, MAX_ASSET_CAPTION_LEN)?;
+        }
+
+        if data.parent_id == Some(id) || data.duplicate_of == Some(id) {
+            return Err(DomainError::RelationViolation);
+        }
+
+        let features = AssetFeatures::default();
+        let entity = AssetEntity {
+            id,
+            features,
+            file_group_id: todo!(),
+            checksum: data.checksum,
+            original_filename: todo!(),
+            original_mimekind: todo!(),
+            title: data.title,
+            caption: data.caption,
+            source_url: data.source_url,
+            state: AssetState::Pending,
+            is_offline: false,
+            parent_id: data.parent_id,
+            duplicate_of: data.duplicate_of,
+            created_at: Utc::now(),
+            updated_at: None,
+            deleted_at: None,
+        };
+
+        Ok(entity)
+    }
+
     pub fn id(&self) -> AssetId {
         self.id
     }
@@ -91,7 +147,7 @@ impl AssetEntity {
 
     pub fn set_title(&mut self, title: Option<String>) -> Result<(), DomainError> {
         if let Some(title) = &title {
-            constrains::ensure_str_len(title, 64)?;
+            constrains::ensure_str_len(title, MAX_ASSET_TITLE_LEN)?;
         }
         self.title = title;
         Ok(())
@@ -103,18 +159,18 @@ impl AssetEntity {
 
     pub fn set_caption(&mut self, caption: Option<String>) -> Result<(), DomainError> {
         if let Some(caption) = &caption {
-            constrains::ensure_str_len(caption, 512)?;
+            constrains::ensure_str_len(caption, MAX_ASSET_CAPTION_LEN)?;
         }
         self.caption = caption;
         Ok(())
     }
 
-    pub fn source(&self) -> Option<&AssetSource> {
-        self.source.as_ref()
+    pub fn source(&self) -> Option<&Url> {
+        self.source_url.as_ref()
     }
 
-    pub fn set_source(&mut self, source: Option<AssetSource>) {
-        self.source = source;
+    pub fn set_source(&mut self, source: Option<Url>) {
+        self.source_url = source;
     }
 
     pub fn state(&self) -> &AssetState {
@@ -133,8 +189,24 @@ impl AssetEntity {
         self.parent_id
     }
 
+    pub fn set_parent_id(&mut self, parent: Option<AssetId>) -> Result<(), DomainError> {
+        if parent == Some(self.id) {
+            return Err(DomainError::RelationViolation);
+        }
+        self.parent_id = parent;
+        Ok(())
+    }
+
     pub fn duplicate_of(&self) -> Option<AssetId> {
         self.duplicate_of
+    }
+
+    pub fn set_duplicate_of(&mut self, duplicate_of: Option<AssetId>) -> Result<(), DomainError> {
+        if duplicate_of == Some(self.id) {
+            return Err(DomainError::RelationViolation);
+        }
+        self.duplicate_of = duplicate_of;
+        Ok(())
     }
 
     pub fn created_at(&self) -> DateTime<Utc> {
@@ -151,6 +223,12 @@ impl AssetEntity {
 
     pub fn set_deleted(&mut self) {
         self.deleted_at = Some(Utc::now());
+    }
+
+    #[inline]
+    /// Returns `true` if this [`AssetEntity`] is marked as deleted
+    pub fn is_deleted(&self) -> bool {
+        self.deleted_at().is_some()
     }
 
     pub fn unset_deleted(&mut self) {
@@ -198,18 +276,6 @@ pub enum AssetStateFailure {
     Unknown,
 }
 
-/// The source from which the asset was obtained
-#[derive(Debug, Clone, PartialEq)]
-pub enum AssetSource {
-    /// Asset source URL
-    Url { url: Url },
-    /// Prompt data used to create the asset via Ai
-    Ai {
-        model: Option<String>,
-        prompt: String,
-    },
-}
-
 /// Derived features computed from an asset
 ///
 /// Attributes are used for a service that finds similar
@@ -235,6 +301,32 @@ impl AssetFeatures {
 
     pub fn dimension(&self) -> Option<(u32, u32)> {
         self.dimension
+    }
+
+    #[inline]
+    pub fn width(&self) -> Option<u32> {
+        self.dimension().map(|(w, _)| w)
+    }
+
+    #[inline]
+    pub fn height(&self) -> Option<u32> {
+        self.dimension().map(|(_, h)| h)
+    }
+
+    /// Returns the aspect ratio of the asset
+    ///
+    /// Returns `None` if the asset dimensions are unavailable
+    pub fn aspect_ratio(&self) -> Option<f32> {
+        if let Some((w, h)) = self.dimension {
+            // Prevents division by `0`
+            if h == 0 {
+                return None;
+            }
+
+            Some(w as f32 / h as f32)
+        } else {
+            None
+        }
     }
 
     pub fn p_hash(&self) -> Option<PerceptualHash> {

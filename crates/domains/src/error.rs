@@ -7,6 +7,8 @@ pub enum DomainError {
     AlreadyExists,
     /// Input data violates constraints
     BadInput,
+    /// ...
+    RelationViolation,
     /// Custom error
     Custom(Box<dyn std::error::Error + Send + 'static>),
 }
