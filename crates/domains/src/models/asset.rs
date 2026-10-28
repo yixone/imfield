@@ -9,87 +9,91 @@ use crate::{
         media::{Color, PerceptualHash},
         url::Url,
     },
-    utils::constrains,
 };
 
-/// Maximum permitted length for an asset name
-const MAX_ASSET_TITLE_LEN: usize = 128;
-
-/// Maximum permitted length for an asset caption
-const MAX_ASSET_CAPTION_LEN: usize = 1024;
-
-/// Maximum permitted length for the original asset filename
-const MAX_ASSET_ORIGINAL_FILENAME_LEN: usize = 255;
-
-/// Asset entity
+/// An asset managed by `imfield`
 ///
-/// An asset is the core entity in `imfield`,
-/// representing content managed by the application
+/// Represent a single unit of content together with its metadata,
+/// derived features, original file information, and state
 #[derive(Debug)]
 pub struct AssetEntity {
-    /// Unique snowflake ID for an asset
+    /// Unique identifier of the asset
     pub(crate) id: AssetId,
 
-    /// Set of calculated asset features
+    /// Features calculated from the asset's content
     pub(crate) features: AssetFeatures,
 
-    /// Identifier for a group of files associated with an asset
+    /// Identifier of the file group containing this asset's files
     pub(crate) file_group_id: FileGroupId,
-    /// SHA256 Checksum for deduplication and verification of the original file
+    /// SHA-256 checksum of the original file, used for
+    /// content verification
     pub(crate) checksum: Sha256Checksum,
-    /// Original filename of the file uploaded by the user
+    /// Original filename, if available
     pub(crate) original_filename: Option<String>,
-    /// Type of the original file uploaded by the user
+    /// MIME kind of the original file
     pub(crate) original_mimekind: MimeKind,
 
-    /// Asset name
+    /// User-defined title of the asset
     pub(crate) title: Option<String>,
-    /// Asset description
+    /// User-defined description of the asset
     pub(crate) caption: Option<String>,
-    /// The source from which the asset was obtained
+    /// URL of the source from which the asset was obtained, if known
     pub(crate) source_url: Option<Url>,
 
-    /// Asset lifecycle state
+    /// Current lifecycle state of the asset
     pub(crate) state: AssetState,
-    /// If `true`, the original file has been lost from storage and the asset cannot be used
+    /// Whether the original file is missing from storage
+    ///
+    /// An offline asset may not be available for normal use until its
+    /// original file is restored
     pub(crate) is_offline: bool,
 
-    /// Parent asset ID
+    /// Identifier of the parent [`AssetEntity`], if this asset
+    /// belongs to another asset
     pub(crate) parent_id: Option<AssetId>,
-    /// ID of the asset that this asset is considered a duplicate of
+    /// Identifier of the [`AssetEntity`] this asset
+    /// is considered a duplicate of
     pub(crate) duplicate_of: Option<AssetId>,
 
-    /// Asset creation time
+    /// Timestamp at which the asset was created
     pub(crate) created_at: DateTime<Utc>,
-    /// Time of the asset's last modification
+    /// Timestamp of the most recent modification, if any
     pub(crate) updated_at: Option<DateTime<Utc>>,
-    /// Optional asset deletion time
+    /// Timestamp at which the asset was marked as deleted, if applicable
     ///
-    /// If `Some`, the asset is considered deleted
+    /// A value of `Some` indicates that the asset is logically deleted
     pub(crate) deleted_at: Option<DateTime<Utc>>,
 }
 
-/// Data required to create an [`AssetEntity`]
+/// Data required to create a new [`AssetEntity`]
 pub struct NewAssetData {
+    /// Initial title of the asset
     pub title: Option<String>,
+    /// Initial description of the asset
     pub caption: Option<String>,
+    /// URL of the source from which the asset was obtained, if known
     pub source_url: Option<Url>,
 
+    /// SHA-256 checksum of the original file
     pub checksum: Sha256Checksum,
 
+    /// Identifier of the parent asset, if any
     pub parent_id: Option<AssetId>,
+    /// Identifier of the asset this asset is considered a duplicate of, if any
     pub duplicate_of: Option<AssetId>,
 }
 
 impl AssetEntity {
+    /// Creates a new [`AssetEntity`] and validates its initial data
+    ///
+    /// The asset is initialized in the [`AssetState::Pending`] state,
+    /// with default features and the current timestamp
     pub fn new(id: AssetId, data: NewAssetData) -> Result<Self, DomainError> {
-        if let Some(title) = &data.title {
-            constrains::ensure_str_len(title, MAX_ASSET_TITLE_LEN)?;
-        }
-        if let Some(caption) = &data.caption {
-            constrains::ensure_str_len(caption, MAX_ASSET_CAPTION_LEN)?;
-        }
+        // Validates asset data
+        validate_asset_title(&data.title)?;
+        validate_asset_caption(&data.caption)?;
 
+        // Verifies that an asset does not reference itself
         if data.parent_id == Some(id) || data.duplicate_of == Some(id) {
             return Err(DomainError::RelationViolation);
         }
@@ -117,122 +121,202 @@ impl AssetEntity {
         Ok(entity)
     }
 
+    /// Returns the asset's identifier
     pub fn id(&self) -> AssetId {
         self.id
     }
 
+    /// Returns the asset's calculated features
     pub fn features(&self) -> &AssetFeatures {
         &self.features
     }
 
+    /// Returns the identifier of the asset's file group
     pub fn file_group_id(&self) -> &FileGroupId {
         &self.file_group_id
     }
 
+    /// Returns the SHA-256 checksum of the original file
     pub fn checksum(&self) -> Sha256Checksum {
         self.checksum
     }
 
+    /// Returns the orignal filename, if available
     pub fn original_filename(&self) -> Option<&str> {
         self.original_filename.as_deref()
     }
 
+    /// Returns the MIME kind of the original file
     pub fn original_mimekind(&self) -> MimeKind {
         self.original_mimekind
     }
 
+    /// Returns the asset's title, if set
     pub fn title(&self) -> Option<&str> {
         self.title.as_deref()
     }
 
+    /// Validates and updates the asset's title
     pub fn set_title(&mut self, title: Option<String>) -> Result<(), DomainError> {
-        if let Some(title) = &title {
-            constrains::ensure_str_len(title, MAX_ASSET_TITLE_LEN)?;
-        }
+        validate_asset_title(&title)?;
         self.title = title;
+        self.refresh_updated_at();
         Ok(())
     }
 
+    /// Returns the asset's description, if set
     pub fn caption(&self) -> Option<&str> {
         self.caption.as_deref()
     }
 
+    /// Validates and updates the asset's description
     pub fn set_caption(&mut self, caption: Option<String>) -> Result<(), DomainError> {
-        if let Some(caption) = &caption {
-            constrains::ensure_str_len(caption, MAX_ASSET_CAPTION_LEN)?;
-        }
+        validate_asset_caption(&caption)?;
         self.caption = caption;
+        self.refresh_updated_at();
         Ok(())
     }
 
-    pub fn source(&self) -> Option<&Url> {
+    /// Returns the URL of the asset's source, if known
+    pub fn source_url(&self) -> Option<&Url> {
         self.source_url.as_ref()
     }
 
-    pub fn set_source(&mut self, source: Option<Url>) {
+    /// Sets the URL of the asset's source
+    ///
+    /// Pass `None` to clear the source URL
+    pub fn set_source_url(&mut self, source: Option<Url>) {
         self.source_url = source;
+        self.refresh_updated_at();
     }
 
+    /// Returns the asset's current lifecycle state
     pub fn state(&self) -> &AssetState {
         &self.state
     }
 
+    /// Returns `true` if the original file is missing from storage
     pub fn is_offline(&self) -> bool {
         self.is_offline
     }
 
+    /// Updates whether the original file is missing from storage
     pub fn set_is_offline(&mut self, is_offline: bool) {
         self.is_offline = is_offline;
+        self.refresh_updated_at();
     }
 
+    /// Returns the identifier of the parent asset, if any
     pub fn parent_id(&self) -> Option<AssetId> {
         self.parent_id
     }
 
+    /// Sets the parent asset
+    ///
+    /// Pass `None` to remove the parent association
+    ///
+    /// Returns [`DomainError::RelationViolation`] if the specified
+    /// parent is the asset itself
     pub fn set_parent_id(&mut self, parent: Option<AssetId>) -> Result<(), DomainError> {
         if parent == Some(self.id) {
             return Err(DomainError::RelationViolation);
         }
         self.parent_id = parent;
+        self.refresh_updated_at();
         Ok(())
     }
 
+    /// Returns the identifier of the asset this asset duplicates, if any
     pub fn duplicate_of(&self) -> Option<AssetId> {
         self.duplicate_of
     }
 
+    /// Sets the asset this asset is considered a duplicate of
+    ///
+    /// Pass `None` to clear the duplicate association
+    ///
+    /// Returns [`DomainError::RelationViolation`] if the specified
+    /// asset is the asset itself
     pub fn set_duplicate_of(&mut self, duplicate_of: Option<AssetId>) -> Result<(), DomainError> {
         if duplicate_of == Some(self.id) {
             return Err(DomainError::RelationViolation);
         }
         self.duplicate_of = duplicate_of;
+        self.refresh_updated_at();
         Ok(())
     }
 
+    /// Returns the asset's creation timestamp in UTC
     pub fn created_at(&self) -> DateTime<Utc> {
         self.created_at
     }
 
+    /// Returns the timestamp of the asset's most recent modification, if any
     pub fn updated_at(&self) -> Option<DateTime<Utc>> {
         self.updated_at
     }
 
+    /// Returns the timestamp at which the asset was marked as deleted, if any
     pub fn deleted_at(&self) -> Option<DateTime<Utc>> {
         self.deleted_at
     }
 
-    pub fn set_deleted(&mut self) {
+    /// Marks the asset as deleted by recording the current UTC timestamp
+    ///
+    /// Returns [`DomainError::EntityDeleted`] if the asset is already marked as deleted
+    pub fn set_deleted(&mut self) -> Result<(), DomainError> {
+        self.ensure_not_deleted()?;
         self.deleted_at = Some(Utc::now());
+        self.refresh_updated_at();
+        Ok(())
     }
 
+    /// Returns `Ok(())` if the asset is not deleted, or [`DomainError::EntityDeleted`] otherwise
+    pub fn ensure_not_deleted(&self) -> Result<(), DomainError> {
+        if self.is_deleted() {
+            return Err(DomainError::EntityDeleted);
+        }
+        Ok(())
+    }
+
+    /// Restores the asset by clearing its deletion timestamp
+    pub fn unset_deleted(&mut self) {
+        self.deleted_at = None;
+        self.refresh_updated_at();
+    }
+
+    /// Returns `true` if this asset is marked as deleted
     #[inline]
-    /// Returns `true` if this [`AssetEntity`] is marked as deleted
     pub fn is_deleted(&self) -> bool {
         self.deleted_at().is_some()
     }
 
-    pub fn unset_deleted(&mut self) {
-        self.deleted_at = None;
+    /// Sets the current timestamp as the asset's update time
+    fn refresh_updated_at(&mut self) {
+        self.updated_at = Some(Utc::now());
+    }
+
+    /// Sets the calculated features of the asset
+    pub fn set_features(&mut self, data: AssetFeaturesSetData) {
+        self.features.accent_color = Some(data.accent_color);
+        self.features.dimension = Some((data.width, data.height));
+        self.features.p_hash = Some(data.p_hash);
+        self.features.a_hash = Some(data.a_hash);
+        self.refresh_updated_at();
+    }
+
+    /// Resets all asset features
+    ///
+    /// Can be used when attributes need to be recalculated
+    pub fn reset_features(&mut self) {
+        self.features = AssetFeatures::default();
+        self.refresh_updated_at();
+    }
+
+    /// Updates the asset's lifecycle state
+    pub fn set_state(&mut self, state: AssetState) {
+        self.state = state;
+        self.refresh_updated_at();
     }
 }
 
@@ -294,6 +378,14 @@ pub struct AssetFeatures {
     pub(crate) a_hash: Option<PerceptualHash>,
 }
 
+pub struct AssetFeaturesSetData {
+    pub accent_color: Color,
+    pub width: u32,
+    pub height: u32,
+    pub p_hash: PerceptualHash,
+    pub a_hash: PerceptualHash,
+}
+
 impl AssetFeatures {
     pub fn accent_color(&self) -> Option<Color> {
         self.accent_color
@@ -336,4 +428,24 @@ impl AssetFeatures {
     pub fn a_hash(&self) -> Option<PerceptualHash> {
         self.a_hash
     }
+}
+
+/// Validates the asset name
+fn validate_asset_title(title: &Option<String>) -> Result<(), DomainError> {
+    if let Some(title) = title
+        && title.len() > 64
+    {
+        return Err(DomainError::BadInput);
+    }
+    Ok(())
+}
+
+/// Validates the asset caption
+fn validate_asset_caption(caption: &Option<String>) -> Result<(), DomainError> {
+    if let Some(caption) = caption
+        && caption.len() > 1024
+    {
+        return Err(DomainError::BadInput);
+    }
+    Ok(())
 }

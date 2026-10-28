@@ -9,6 +9,8 @@ pub enum DomainError {
     BadInput,
     /// ...
     RelationViolation,
+    /// ...
+    EntityDeleted,
     /// Custom error
     Custom(Box<dyn std::error::Error + Send + 'static>),
 }
