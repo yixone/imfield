@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/domains", "crates/snowflake"]
+members = ["crates/domains", "crates/mimetype", "crates/snowflake"]
 
 [workspace.package]
 edition = "2024"
@@ -8,10 +8,12 @@ edition = "2024"
 [workspace.dependencies]
 # Internal
 imfield-domains.path = "crates/domains"
+imfield-mimetype.path = "crates/mimetype"
 imfield-snowflake.path = "crates/snowflake"
 
 # Extern
 base64 = "0.23.1"
 chrono = "0.4.42"
+hex = "0.4.3"
 serde = "1.0.219"
 sqlx = "0.8.5"
