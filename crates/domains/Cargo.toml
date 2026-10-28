@@ -20,6 +20,7 @@ imfield-mimetype.workspace = true
 imfield-snowflake.workspace = true
 
 # Extern
+base64.workspace = true
 chrono.workspace = true
 hex.workspace = true
 serde = { workspace = true, features = ["derive"], optional = true }

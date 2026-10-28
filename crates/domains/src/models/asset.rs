@@ -6,7 +6,7 @@ use crate::{
     types::{
         files::Sha256Checksum,
         id::{AssetId, FileGroupId},
-        media::{Color, PerceptualHash},
+        media::{Color, PerceptualHash, ThumbHash},
         url::Url,
     },
 };
@@ -20,8 +20,12 @@ pub struct AssetEntity {
     /// Unique identifier of the asset
     pub(crate) id: AssetId,
 
-    /// Features calculated from the asset's content
-    pub(crate) features: AssetFeatures,
+    /// Asset accent color
+    pub(crate) accent_color: Option<Color>,
+    /// Asset width and height in pixels
+    pub(crate) dimension: Option<(u32, u32)>,
+    /// ThumbHash calculated for the asset
+    pub(crate) thumbhash: Option<ThumbHash>,
 
     /// Identifier of the file group containing this asset's files
     pub(crate) file_group_id: FileGroupId,
@@ -47,6 +51,8 @@ pub struct AssetEntity {
     /// An offline asset may not be available for normal use until its
     /// original file is restored
     pub(crate) is_offline: bool,
+
+    pub(crate) similarity_features: AssetSimilarityFeatures,
 
     /// Identifier of the parent [`AssetEntity`], if this asset
     /// belongs to another asset
@@ -98,10 +104,13 @@ impl AssetEntity {
             return Err(DomainError::RelationViolation);
         }
 
-        let features = AssetFeatures::default();
+        let features = AssetSimilarityFeatures::default();
         let entity = AssetEntity {
             id,
-            features,
+            similarity_features: features,
+            accent_color: None,
+            dimension: None,
+            thumbhash: None,
             file_group_id: todo!(),
             checksum: data.checksum,
             original_filename: todo!(),
@@ -126,9 +135,68 @@ impl AssetEntity {
         self.id
     }
 
-    /// Returns the asset's calculated features
-    pub fn features(&self) -> &AssetFeatures {
-        &self.features
+    /// Sets the asset's dimension in pixels
+    pub fn set_dimension(&mut self, dim: Option<(u32, u32)>) {
+        // TODO: Add validation for (e.g. for (0,0) or (99999999, 999999999))
+        self.dimension = dim;
+        self.refresh_updated_at();
+    }
+
+    /// Returns the asset's width in pixels, if available
+    pub fn width(&self) -> Option<u32> {
+        self.dimension.map(|(w, _)| w)
+    }
+
+    /// Returns the asset's height in pixels, if available
+    pub fn height(&self) -> Option<u32> {
+        self.dimension.map(|(_, h)| h)
+    }
+
+    /// Returns the asset's aspect ratio (width / height)
+    ///
+    /// Returns `None` if the asset dimensions are unavailable
+    pub fn aspect_ratio(&self) -> Option<f32> {
+        if let Some((w, h)) = self.dimension {
+            // Prevents division by `0`
+            if h == 0 {
+                return None;
+            }
+            Some(w as f32 / h as f32)
+        } else {
+            None
+        }
+    }
+
+    /// Returns the asset's accent color, if available
+    pub fn accent_color(&self) -> Option<Color> {
+        self.accent_color
+    }
+
+    /// Sets the asset's accent color
+    pub fn set_accent_color(&mut self, color: Option<Color>) {
+        self.accent_color = color;
+        self.refresh_updated_at();
+    }
+
+    /// Returns the asset's ThumbHash, if available
+    pub fn thumbhash(&self) -> Option<&ThumbHash> {
+        self.thumbhash.as_ref()
+    }
+
+    /// Sets the asset's ThumbHash
+    pub fn set_thumbhash(&mut self, th: Option<ThumbHash>) {
+        self.thumbhash = th;
+        self.refresh_updated_at();
+    }
+
+    /// Returns the asset's features used to similarity search
+    pub fn similarity_features(&self) -> &AssetSimilarityFeatures {
+        &self.similarity_features
+    }
+
+    /// Returns a mutable reference to the asset's features used to similarity search
+    pub fn similarity_features_mut(&mut self) -> &mut AssetSimilarityFeatures {
+        &mut self.similarity_features
     }
 
     /// Returns the identifier of the asset's file group
@@ -296,23 +364,6 @@ impl AssetEntity {
         self.updated_at = Some(Utc::now());
     }
 
-    /// Sets the calculated features of the asset
-    pub fn set_features(&mut self, data: AssetFeaturesSetData) {
-        self.features.accent_color = Some(data.accent_color);
-        self.features.dimension = Some((data.width, data.height));
-        self.features.p_hash = Some(data.p_hash);
-        self.features.a_hash = Some(data.a_hash);
-        self.refresh_updated_at();
-    }
-
-    /// Resets all asset features
-    ///
-    /// Can be used when attributes need to be recalculated
-    pub fn reset_features(&mut self) {
-        self.features = AssetFeatures::default();
-        self.refresh_updated_at();
-    }
-
     /// Updates the asset's lifecycle state
     pub fn set_state(&mut self, state: AssetState) {
         self.state = state;
@@ -360,67 +411,16 @@ pub enum AssetStateFailure {
     Unknown,
 }
 
-/// Derived features computed from an asset
-///
-/// Attributes are used for a service that finds similar
-/// assets and for detecting duplicates
+// TODO: Add `features_updated_at`
 #[derive(Debug, Default)]
-pub struct AssetFeatures {
-    /// Asset accent color
-    pub(crate) accent_color: Option<Color>,
-
-    /// Asset width and height in pixels
-    pub(crate) dimension: Option<(u32, u32)>,
-
+pub struct AssetSimilarityFeatures {
     /// Asset perceptual hash
     pub(crate) p_hash: Option<PerceptualHash>,
     /// Asset average hash
     pub(crate) a_hash: Option<PerceptualHash>,
 }
 
-pub struct AssetFeaturesSetData {
-    pub accent_color: Color,
-    pub width: u32,
-    pub height: u32,
-    pub p_hash: PerceptualHash,
-    pub a_hash: PerceptualHash,
-}
-
-impl AssetFeatures {
-    pub fn accent_color(&self) -> Option<Color> {
-        self.accent_color
-    }
-
-    pub fn dimension(&self) -> Option<(u32, u32)> {
-        self.dimension
-    }
-
-    #[inline]
-    pub fn width(&self) -> Option<u32> {
-        self.dimension().map(|(w, _)| w)
-    }
-
-    #[inline]
-    pub fn height(&self) -> Option<u32> {
-        self.dimension().map(|(_, h)| h)
-    }
-
-    /// Returns the aspect ratio of the asset
-    ///
-    /// Returns `None` if the asset dimensions are unavailable
-    pub fn aspect_ratio(&self) -> Option<f32> {
-        if let Some((w, h)) = self.dimension {
-            // Prevents division by `0`
-            if h == 0 {
-                return None;
-            }
-
-            Some(w as f32 / h as f32)
-        } else {
-            None
-        }
-    }
-
+impl AssetSimilarityFeatures {
     pub fn p_hash(&self) -> Option<PerceptualHash> {
         self.p_hash
     }
