@@ -3,5 +3,9 @@
 pub struct Url(pub(crate) String);
 
 impl Url {
+    pub fn new(buff: String) -> Self {
+        Self(buff)
+    }
+
     // TODO!
 }

@@ -1,11 +1,15 @@
 use chrono::{DateTime, Utc};
 use imfield_mimetype::MimeKind;
 
-use crate::types::{
-    files::Sha256Checksum,
-    id::{AssetId, FileGroupId},
-    media::{Color, PerceptualHash},
-    url::Url,
+use crate::{
+    DomainError,
+    types::{
+        files::Sha256Checksum,
+        id::{AssetId, FileGroupId},
+        media::{Color, PerceptualHash},
+        url::Url,
+    },
+    utils::constrains,
 };
 
 /// Asset entity
@@ -36,14 +40,23 @@ pub struct AssetEntity {
     /// The source from which the asset was obtained
     pub(crate) source: Option<AssetSource>,
 
+    /// Asset lifecycle state
     pub(crate) state: AssetState,
+    /// If `true`, the original file has been lost from storage and the asset cannot be used
     pub(crate) is_offline: bool,
 
+    /// Parent asset ID
     pub(crate) parent_id: Option<AssetId>,
+    /// ID of the asset that this asset is considered a duplicate of
     pub(crate) duplicate_of: Option<AssetId>,
 
+    /// Asset creation time
     pub(crate) created_at: DateTime<Utc>,
+    /// Time of the asset's last modification
     pub(crate) updated_at: Option<DateTime<Utc>>,
+    /// Optional asset deletion time
+    ///
+    /// If `Some`, the asset is considered deleted
     pub(crate) deleted_at: Option<DateTime<Utc>>,
 }
 
@@ -76,12 +89,32 @@ impl AssetEntity {
         self.title.as_deref()
     }
 
+    pub fn set_title(&mut self, title: Option<String>) -> Result<(), DomainError> {
+        if let Some(title) = &title {
+            constrains::ensure_str_len(title, 64)?;
+        }
+        self.title = title;
+        Ok(())
+    }
+
     pub fn caption(&self) -> Option<&str> {
         self.caption.as_deref()
     }
 
+    pub fn set_caption(&mut self, caption: Option<String>) -> Result<(), DomainError> {
+        if let Some(caption) = &caption {
+            constrains::ensure_str_len(caption, 512)?;
+        }
+        self.caption = caption;
+        Ok(())
+    }
+
     pub fn source(&self) -> Option<&AssetSource> {
         self.source.as_ref()
+    }
+
+    pub fn set_source(&mut self, source: Option<AssetSource>) {
+        self.source = source;
     }
 
     pub fn state(&self) -> &AssetState {
@@ -90,6 +123,10 @@ impl AssetEntity {
 
     pub fn is_offline(&self) -> bool {
         self.is_offline
+    }
+
+    pub fn set_is_offline(&mut self, is_offline: bool) {
+        self.is_offline = is_offline;
     }
 
     pub fn parent_id(&self) -> Option<AssetId> {
@@ -110,6 +147,14 @@ impl AssetEntity {
 
     pub fn deleted_at(&self) -> Option<DateTime<Utc>> {
         self.deleted_at
+    }
+
+    pub fn set_deleted(&mut self) {
+        self.deleted_at = Some(Utc::now());
+    }
+
+    pub fn unset_deleted(&mut self) {
+        self.deleted_at = None;
     }
 }
 
@@ -181,4 +226,22 @@ pub struct AssetFeatures {
     pub(crate) p_hash: Option<PerceptualHash>,
     /// Asset average hash
     pub(crate) a_hash: Option<PerceptualHash>,
+}
+
+impl AssetFeatures {
+    pub fn accent_color(&self) -> Option<Color> {
+        self.accent_color
+    }
+
+    pub fn dimension(&self) -> Option<(u32, u32)> {
+        self.dimension
+    }
+
+    pub fn p_hash(&self) -> Option<PerceptualHash> {
+        self.p_hash
+    }
+
+    pub fn a_hash(&self) -> Option<PerceptualHash> {
+        self.a_hash
+    }
 }

@@ -5,6 +5,8 @@ pub enum DomainError {
     NotFound,
     /// The entity already exists, and conflict is impermissible
     AlreadyExists,
+    /// Input data violates constraints
+    BadInput,
     /// Custom error
     Custom(Box<dyn std::error::Error + Send + 'static>),
 }
