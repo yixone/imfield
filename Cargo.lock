@@ -574,8 +574,19 @@ dependencies = [
 name = "imfield-domains"
 version = "0.1.0"
 dependencies = [
+ "base64 0.23.1",
  "chrono",
+ "hex",
+ "imfield-mimetype",
  "imfield-snowflake",
+ "serde",
+ "sqlx",
+]
+
+[[package]]
+name = "imfield-mimetype"
+version = "0.1.0"
+dependencies = [
  "serde",
  "sqlx",
 ]
