@@ -2,6 +2,7 @@ use std::time::Duration;
 
 use chrono::{DateTime, Utc};
 use imfield_mimetype::{MimeKind, MimeType};
+use imfield_storage_address::StoragePath;
 
 use crate::types::{
     files::{FileVariant, Sha256Checksum},
@@ -68,9 +69,8 @@ pub struct File {
     /// File creation time
     pub(crate) created_at: DateTime<Utc>,
 
-    // TODO!
     /// File path in application storage
-    // pub(crate) path: StoragePath,
+    pub(crate) path: StoragePath,
 
     /// File size in bytes
     pub(crate) size_bytes: u64,
@@ -86,6 +86,7 @@ impl File {
     pub fn new(
         container: &FileContainerId,
         variant: FileVariant,
+        path: StoragePath,
         size_bytes: u64,
         mimetype: MimeType,
         duration: Option<Duration>,
@@ -93,6 +94,7 @@ impl File {
         File {
             key: FileKey(container.clone(), variant),
             created_at: Utc::now(),
+            path,
             size_bytes,
             mimetype,
             duration,
@@ -105,6 +107,10 @@ impl File {
 
     pub fn created_at(&self) -> DateTime<Utc> {
         self.created_at
+    }
+
+    pub fn path(&self) -> &StoragePath {
+        &self.path
     }
 
     pub fn size_bytes(&self) -> u64 {
