@@ -19,6 +19,8 @@ default = []
 imfield-mimetype.workspace = true
 imfield-snowflake.workspace = true
 
+imfield-storage-address.workspace = true
+
 # Extern
 base64.workspace = true
 chrono.workspace = true
