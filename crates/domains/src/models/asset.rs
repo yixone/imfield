@@ -1,11 +1,10 @@
 use chrono::{DateTime, Utc};
-use imfield_mimetype::MimeKind;
 
 use crate::{
     DomainError,
+    models::file::FileContainer,
     types::{
-        files::Sha256Checksum,
-        id::{AssetId, FileGroupId},
+        id::{AssetId, FileContainerId},
         media::{Color, PerceptualHash, ThumbHash},
         url::Url,
     },
@@ -16,9 +15,11 @@ use crate::{
 /// Represent a single unit of content together with its metadata,
 /// derived features, original file information, and state
 #[derive(Debug)]
-pub struct AssetEntity {
+pub struct Asset {
     /// Unique identifier of the asset
     pub(crate) id: AssetId,
+    /// Identifier of the asset's file container
+    pub(crate) file_container_id: FileContainerId,
 
     /// Asset accent color
     pub(crate) accent_color: Option<Color>,
@@ -26,16 +27,6 @@ pub struct AssetEntity {
     pub(crate) dimension: Option<(u32, u32)>,
     /// ThumbHash calculated for the asset
     pub(crate) thumbhash: Option<ThumbHash>,
-
-    /// Identifier of the file group containing this asset's files
-    pub(crate) file_group_id: FileGroupId,
-    /// SHA-256 checksum of the original file, used for
-    /// content verification
-    pub(crate) checksum: Sha256Checksum,
-    /// Original filename, if available
-    pub(crate) original_filename: Option<String>,
-    /// MIME kind of the original file
-    pub(crate) original_mimekind: MimeKind,
 
     /// User-defined title of the asset
     pub(crate) title: Option<String>,
@@ -52,12 +43,13 @@ pub struct AssetEntity {
     /// original file is restored
     pub(crate) is_offline: bool,
 
+    /// Features used to find visually similar assets
     pub(crate) similarity_features: AssetSimilarityFeatures,
 
-    /// Identifier of the parent [`AssetEntity`], if this asset
+    /// Identifier of the parent [`Asset`], if this asset
     /// belongs to another asset
     pub(crate) parent_id: Option<AssetId>,
-    /// Identifier of the [`AssetEntity`] this asset
+    /// Identifier of the [`Asset`] this asset
     /// is considered a duplicate of
     pub(crate) duplicate_of: Option<AssetId>,
 
@@ -71,7 +63,7 @@ pub struct AssetEntity {
     pub(crate) deleted_at: Option<DateTime<Utc>>,
 }
 
-/// Data required to create a new [`AssetEntity`]
+/// Data required to create a new [`Asset`]
 pub struct NewAssetData {
     /// Initial title of the asset
     pub title: Option<String>,
@@ -80,21 +72,18 @@ pub struct NewAssetData {
     /// URL of the source from which the asset was obtained, if known
     pub source_url: Option<Url>,
 
-    /// SHA-256 checksum of the original file
-    pub checksum: Sha256Checksum,
-
     /// Identifier of the parent asset, if any
     pub parent_id: Option<AssetId>,
     /// Identifier of the asset this asset is considered a duplicate of, if any
     pub duplicate_of: Option<AssetId>,
 }
 
-impl AssetEntity {
-    /// Creates a new [`AssetEntity`] and validates its initial data
+impl Asset {
+    /// Creates a new [`Asset`] and validates its initial data
     ///
     /// The asset is initialized in the [`AssetState::Pending`] state,
     /// with default features and the current timestamp
-    pub fn new(id: AssetId, data: NewAssetData) -> Result<Self, DomainError> {
+    pub fn new(id: AssetId, file: &FileContainer, data: NewAssetData) -> Result<Self, DomainError> {
         // Validates asset data
         validate_asset_title(&data.title)?;
         validate_asset_caption(&data.caption)?;
@@ -105,16 +94,13 @@ impl AssetEntity {
         }
 
         let features = AssetSimilarityFeatures::default();
-        let entity = AssetEntity {
+        let entity = Asset {
             id,
             similarity_features: features,
             accent_color: None,
             dimension: None,
             thumbhash: None,
-            file_group_id: todo!(),
-            checksum: data.checksum,
-            original_filename: todo!(),
-            original_mimekind: todo!(),
+            file_container_id: file.id().clone(),
             title: data.title,
             caption: data.caption,
             source_url: data.source_url,
@@ -200,23 +186,8 @@ impl AssetEntity {
     }
 
     /// Returns the identifier of the asset's file group
-    pub fn file_group_id(&self) -> &FileGroupId {
-        &self.file_group_id
-    }
-
-    /// Returns the SHA-256 checksum of the original file
-    pub fn checksum(&self) -> Sha256Checksum {
-        self.checksum
-    }
-
-    /// Returns the orignal filename, if available
-    pub fn original_filename(&self) -> Option<&str> {
-        self.original_filename.as_deref()
-    }
-
-    /// Returns the MIME kind of the original file
-    pub fn original_mimekind(&self) -> MimeKind {
-        self.original_mimekind
+    pub fn file_group_id(&self) -> &FileContainerId {
+        &self.file_container_id
     }
 
     /// Returns the asset's title, if set
@@ -411,22 +382,50 @@ pub enum AssetStateFailure {
     Unknown,
 }
 
-// TODO: Add `features_updated_at`
+/// Features used to find visually similar assets
 #[derive(Debug, Default)]
 pub struct AssetSimilarityFeatures {
-    /// Asset perceptual hash
+    /// Timestamp of the most recent features update, if any
+    pub(crate) updated_at: Option<DateTime<Utc>>,
+    /// Perceptual hash of the asset, if available
     pub(crate) p_hash: Option<PerceptualHash>,
-    /// Asset average hash
+    /// Average hash of the asset, if available
     pub(crate) a_hash: Option<PerceptualHash>,
 }
 
 impl AssetSimilarityFeatures {
+    /// Returns the asset's perceptual hash, if available
     pub fn p_hash(&self) -> Option<PerceptualHash> {
         self.p_hash
     }
 
+    /// Sets the asset's perceptual hash
+    pub fn set_p_hash(&mut self, p_hash: PerceptualHash) {
+        self.p_hash = Some(p_hash);
+        self.refresh_updated_at();
+    }
+
+    /// Returns the asset's average hash, if available
     pub fn a_hash(&self) -> Option<PerceptualHash> {
         self.a_hash
+    }
+
+    /// Sets the asset's average hash
+    pub fn set_a_hash(&mut self, a_hash: PerceptualHash) {
+        self.a_hash = Some(a_hash);
+        self.refresh_updated_at();
+    }
+
+    /// Clears all similarity features
+    pub fn reset(&mut self) {
+        self.a_hash = None;
+        self.p_hash = None;
+        self.refresh_updated_at();
+    }
+
+    /// Sets the current timestamp as the last update time
+    fn refresh_updated_at(&mut self) {
+        self.updated_at = Some(Utc::now());
     }
 }
 

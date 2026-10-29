@@ -42,9 +42,9 @@ id_type_copy!(
 
 id_type!(
     /// ...
-    FileGroupId as imfield_snowflake::SnowflakeIdStr
+    FileContainerId as imfield_snowflake::SnowflakeIdStr
 );
 
 /// Identifies a [`File`] by its owning [`FileGroup`] and variant
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct FileKey(pub(crate) FileGroupId, pub(crate) FileVariant);
+pub struct FileKey(pub(crate) FileContainerId, pub(crate) FileVariant);
