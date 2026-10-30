@@ -5,9 +5,11 @@ members = [
 
     "crates/mimetype",
     "crates/snowflake",
-    "crates/storage",
 
+    "crates/storage",
     "crates/storage-address",
+
+    "crates/utils",
 ]
 
 [workspace.package]
@@ -23,9 +25,12 @@ imfield-snowflake.path = "crates/snowflake"
 imfield-storage.path = "crates/storage"
 imfield-storage-address.path = "crates/storage-address"
 
+imfield-utils.path = "crates/utils"
+
 # Extern
 base64 = "0.23.1"
 chrono = "0.4.42"
 hex = "0.4.3"
 serde = "1.0.219"
 sqlx = "0.8.5"
+tokio = "1.47.1"
