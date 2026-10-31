@@ -1,4 +1,4 @@
-//! Implementation of the snowflake-id algorithm for imfield
+//! Implementation of the snowflake-id algorithm for Imfield
 //!
 //! ### Usage
 //! ```

@@ -1,6 +1,6 @@
-//! Types and utilites for media type identification
+//! MIME type detection crate
 //!
-//! Module provides MIME types representations and detectors for
+//! Crate provides utilites for
 //! identifying media types from file magic bytes
 
 mod detector;

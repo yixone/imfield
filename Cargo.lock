@@ -605,6 +605,9 @@ dependencies = [
 [[package]]
 name = "imfield-database-core"
 version = "0.1.0"
+dependencies = [
+ "imfield-domains",
+]
 
 [[package]]
 name = "imfield-database-sqlite"

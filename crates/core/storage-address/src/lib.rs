@@ -1,6 +1,4 @@
-//! File storage internal addressing components
-
-// TODO: Rename crate to `storage-common`
+//! Logical file addressing for Imfield storage
 
 pub mod path;
 

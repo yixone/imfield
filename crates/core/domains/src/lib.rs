@@ -1,6 +1,6 @@
-//! ## Imfield domains
+//! Domain models and rules for Imfield
 //!
-//! The module contains domain [entities](models), their [types], methods, and [utilities](utils)
+//! This crate defines the core domain entities and types
 
 pub mod models;
 pub mod types;
