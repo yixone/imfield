@@ -5,4 +5,5 @@ edition.workspace = true
 
 [dependencies]
 imfield-storage-address.workspace = true
-imfield-utils = { workspace = true, features = ["futures"] }
+imfield-storage-sys.workspace = true
+imfield-utils = { workspace = true, features = ["futures", "rand"] }
