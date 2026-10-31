@@ -9,6 +9,9 @@ members = [
     "crates/core/storage",
     "crates/core/storage-address",
 
+    "crates/core/database-core",
+    "crates/core/database-sqlite",
+
     "crates/core/utils",
 ]
 
@@ -25,6 +28,9 @@ imfield-snowflake.path = "crates/shared/snowflake"
 
 imfield-storage.path = "crates/core/storage"
 imfield-storage-address.path = "crates/core/storage-address"
+
+imfield-database-core.path = "crates/core/database-core"
+imfield-database-sqlite.path = "crates/core/database-sqlite"
 
 imfield-utils.path = "crates/core/utils"
 
