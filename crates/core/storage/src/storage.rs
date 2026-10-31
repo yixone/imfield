@@ -1,10 +1,13 @@
 use std::path::PathBuf;
 
 use imfield_storage_address::StoragePath;
-use imfield_storage_sys::{stats::FileSystemSpace, statvfs};
 use imfield_utils::futures::asyncify;
 
-use crate::{StorageError, fs::create_parents};
+use crate::{
+    StorageError,
+    fs::create_parents,
+    system::{FileSystemSpace, storage_stats},
+};
 
 pub struct Storage {
     root: PathBuf,
@@ -30,7 +33,7 @@ impl Storage {
     /// The statistics describe the filesystem containing the storage root
     pub async fn disk_usage(&self) -> Result<FileSystemSpace, StorageError> {
         let path = self.root.to_path_buf();
-        let stats = asyncify(move || statvfs(path)).await??;
+        let stats = asyncify(move || storage_stats(path)).await??;
         Ok(stats)
     }
 

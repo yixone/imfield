@@ -639,23 +639,15 @@ version = "0.1.0"
 dependencies = [
  "imfield-domains",
  "imfield-storage-address",
- "imfield-storage-sys",
  "imfield-utils",
+ "libc",
  "tokio",
+ "winapi",
 ]
 
 [[package]]
 name = "imfield-storage-address"
 version = "0.1.0"
-
-[[package]]
-name = "imfield-storage-sys"
-version = "0.1.0"
-dependencies = [
- "libc",
- "tokio",
- "winapi",
-]
 
 [[package]]
 name = "imfield-utils"

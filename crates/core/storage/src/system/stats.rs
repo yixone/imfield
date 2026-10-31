@@ -42,7 +42,7 @@ impl FileSystemSpace {
 /// println!("total: {} bytes", stats.bytes_total());
 /// println!("free: {} bytes", stats.bytes_free());
 /// ```
-pub fn statvfs(path: impl AsRef<Path>) -> std::io::Result<FileSystemSpace> {
+pub fn storage_stats(path: impl AsRef<Path>) -> std::io::Result<FileSystemSpace> {
     _statvfs(path.as_ref())
 }
 

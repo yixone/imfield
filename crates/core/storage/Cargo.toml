@@ -4,11 +4,24 @@ version = "0.1.0"
 edition.workspace = true
 
 [dependencies]
-# Interanl
+# --- Interanl ---
 imfield-domains.workspace = true
 imfield-storage-address.workspace = true
-imfield-storage-sys.workspace = true
 imfield-utils = { workspace = true, features = ["futures", "rand"] }
 
-# Extern
+# --- Extern ---
 tokio = { workspace = true, features = ["io-util", "fs", "time", "rt"] }
+
+# --- FFI ---
+[target.'cfg(any(target_os = "linux", target_os = "macos"))'.dependencies]
+libc.workspace = true
+
+[target.'cfg(windows)'.dependencies]
+winapi = { workspace = true, features = [
+    "handleapi",
+    "processthreadsapi",
+    "winerror",
+    "fileapi",
+    "winbase",
+    "std",
+] }
