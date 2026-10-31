@@ -15,6 +15,7 @@ members = [
 
 [workspace.package]
 edition = "2024"
+repository = "https://github.com/yixone/imfield"
 
 [workspace.dependencies]
 # --- Internal ---
