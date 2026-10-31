@@ -1,16 +1,16 @@
 [workspace]
 resolver = "2"
 members = [
-    "crates/domains",
+    "crates/core/domains",
 
-    "crates/mimetype",
-    "crates/snowflake",
+    "crates/shared/mimetype",
+    "crates/shared/snowflake",
 
-    "crates/storage",
-    "crates/storage-address",
-    "crates/storage-sys",
+    "crates/core/storage",
+    "crates/core/storage-address",
+    "crates/core/storage-sys",
 
-    "crates/utils",
+    "crates/core/utils",
 ]
 
 [workspace.package]
@@ -19,16 +19,16 @@ repository = "https://github.com/yixone/imfield"
 
 [workspace.dependencies]
 # --- Internal ---
-imfield-domains.path = "crates/domains"
+imfield-domains.path = "crates/core/domains"
 
-imfield-mimetype.path = "crates/mimetype"
-imfield-snowflake.path = "crates/snowflake"
+imfield-mimetype.path = "crates/shared/mimetype"
+imfield-snowflake.path = "crates/shared/snowflake"
 
-imfield-storage.path = "crates/storage"
-imfield-storage-address.path = "crates/storage-address"
-imfield-storage-sys.path = "crates/storage-sys"
+imfield-storage.path = "crates/core/storage"
+imfield-storage-address.path = "crates/core/storage-address"
+imfield-storage-sys.path = "crates/core/storage-sys"
 
-imfield-utils.path = "crates/utils"
+imfield-utils.path = "crates/core/utils"
 
 # --- Extern ---
 base64 = "0.23.1"
