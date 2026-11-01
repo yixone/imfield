@@ -2,3 +2,8 @@
 //!
 //! This crate defines database interfaces, shared persistence
 //! types and errors used by the application components
+
+pub mod ports;
+pub mod types;
+
+pub mod error;

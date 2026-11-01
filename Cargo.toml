@@ -35,6 +35,7 @@ imfield-database-sqlite.path = "crates/core/database-sqlite"
 imfield-utils.path = "crates/core/utils"
 
 # --- Extern ---
+async-trait = "0.1.89"
 base64 = "0.23.1"
 chrono = "0.4.42"
 hex = "0.4.3"
