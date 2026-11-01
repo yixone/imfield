@@ -3,16 +3,15 @@ resolver = "2"
 members = [
     "crates/core/domains",
 
-    "crates/shared/mimetype",
-    "crates/shared/snowflake",
-
     "crates/core/storage",
     "crates/core/storage-address",
 
     "crates/core/database-core",
     "crates/core/database-sqlite",
 
-    "crates/core/utils",
+    "crates/shared/mimetype",
+    "crates/shared/snowflake",
+    "crates/shared/utils",
 ]
 
 [workspace.package]
@@ -23,16 +22,16 @@ repository = "https://github.com/yixone/imfield"
 # --- Internal ---
 imfield-domains.path = "crates/core/domains"
 
-imfield-mimetype.path = "crates/shared/mimetype"
-imfield-snowflake.path = "crates/shared/snowflake"
-
 imfield-storage.path = "crates/core/storage"
 imfield-storage-address.path = "crates/core/storage-address"
 
 imfield-database-core.path = "crates/core/database-core"
 imfield-database-sqlite.path = "crates/core/database-sqlite"
 
-imfield-utils.path = "crates/core/utils"
+imfield-mimetype.path = "crates/shared/mimetype"
+imfield-snowflake.path = "crates/shared/snowflake"
+
+imfield-utils.path = "crates/shared/utils"
 
 # --- Extern ---
 async-trait = "0.1.89"
