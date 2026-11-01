@@ -1,4 +1,4 @@
-use base64::{Engine, prelude::BASE64_URL_SAFE_NO_PAD};
+use imfield_utils::base62;
 
 /// 64-bit unique identifier
 ///
@@ -34,7 +34,7 @@ pub struct SnowflakeIdStr(pub(crate) String);
 
 impl From<SnowflakeId> for SnowflakeIdStr {
     fn from(id: SnowflakeId) -> Self {
-        let encoded = BASE64_URL_SAFE_NO_PAD.encode(id.0.to_le_bytes());
+        let encoded = base62::encode(id.0 as u64);
         SnowflakeIdStr(encoded)
     }
 }

@@ -7,7 +7,7 @@ edition.workspace = true
 # --- Interanl ---
 imfield-domains.workspace = true
 imfield-storage-address.workspace = true
-imfield-utils = { workspace = true, features = ["futures", "rand"] }
+imfield-utils.workspace = true
 
 # --- Extern ---
 tokio = { workspace = true, features = ["io-util", "fs", "time", "rt"] }

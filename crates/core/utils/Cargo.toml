@@ -3,16 +3,7 @@ name = "imfield-utils"
 version = "0.1.0"
 edition.workspace = true
 
-[features]
-futures = ["dep:tokio"]
-rand = ["dep:rand", "dep:base64"]
-default = []
-
 [dependencies]
 # Workspace
-base64 = { workspace = true, optional = true }
-rand = { workspace = true, optional = true }
-tokio = { workspace = true, optional = true, features = [
-    "macros",
-    "rt-multi-thread",
-] }
+rand.workspace = true
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }

@@ -8,7 +8,9 @@ sqlx = ["dep:sqlx"]
 serde = ["dep:serde"]
 
 [dependencies]
-# Extern
-base64.workspace = true
+# --- Internal ---
+imfield-utils.workspace = true
+
+# --- Extern ---
 serde = { workspace = true, features = ["derive"], optional = true }
 sqlx = { workspace = true, optional = true }

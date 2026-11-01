@@ -3,8 +3,5 @@
 //! This crate provides reusable helper functions and utilities
 //! shared across the application
 
-#[cfg(feature = "futures")]
+pub mod base62;
 pub mod futures;
-
-#[cfg(feature = "rand")]
-pub mod rand;

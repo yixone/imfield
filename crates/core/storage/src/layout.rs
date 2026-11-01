@@ -23,7 +23,7 @@ impl StorageLayout {
     /// The original file name is prefixed with `~` and suffixed with random
     /// identifier to produce an unique temporary file name
     pub fn temp_path(mut p: StoragePath) -> Result<StoragePath, StorageError> {
-        let suffix = imfield_utils::rand::random_b64(TEMP_SUFFIX_LEN);
+        let suffix = imfield_utils::base62::random_str(TEMP_SUFFIX_LEN);
         let temp_name = p
             .file_name()
             .map(|p| format!("~{}-{}", p, suffix))
