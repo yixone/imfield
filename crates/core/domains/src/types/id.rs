@@ -36,14 +36,11 @@ macro_rules! id_type_copy {
 }
 
 id_type_copy!(
-    /// ...
+    #[derive(PartialOrd, Ord)]
     AssetId as imfield_snowflake::SnowflakeId
 );
 
-id_type!(
-    /// ...
-    FileContainerId as imfield_snowflake::SnowflakeIdStr
-);
+id_type!(FileContainerId as imfield_snowflake::SnowflakeIdStr);
 
 /// Identifies a [`File`] by its owning [`FileGroup`] and variant
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

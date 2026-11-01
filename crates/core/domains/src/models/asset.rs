@@ -448,3 +448,9 @@ fn validate_asset_caption(caption: &Option<String>) -> Result<(), DomainError> {
     }
     Ok(())
 }
+
+pub enum AssetSortBy {
+    CreatedAt,
+    DeletedAt,
+    OriginalSize,
+}
