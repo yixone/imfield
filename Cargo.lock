@@ -614,18 +614,11 @@ dependencies = [
 ]
 
 [[package]]
-name = "imfield-database-core"
+name = "imfield-database"
 version = "0.1.0"
 dependencies = [
  "async-trait",
  "imfield-domains",
-]
-
-[[package]]
-name = "imfield-database-sqlite"
-version = "0.1.0"
-dependencies = [
- "imfield-database-core",
 ]
 
 [[package]]

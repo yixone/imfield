@@ -1,5 +1,5 @@
 [package]
-name = "imfield-database-core"
+name = "imfield-database"
 version = "0.1.0"
 edition.workspace = true
 repository.workspace = true
