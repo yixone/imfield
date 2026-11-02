@@ -1,6 +1,7 @@
-//! Domain models and rules for Imfield
+//! Application models and value types
 //!
-//! This crate defines the core domain entities and types
+//! Defines the data structures and types shared across application
+//! components
 
 pub mod models;
 pub mod types;

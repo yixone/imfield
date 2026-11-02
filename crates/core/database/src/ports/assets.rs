@@ -10,7 +10,7 @@ use imfield_models::{
 use crate::{
     DatabaseError,
     types::{
-        closure::{DeleteFn, UpdateFn},
+        commands::{DeleteFn, UpdateFn},
         query::{CursorPagination, DeletedVisibility, SortOrder},
         view::{AssetView, FileContainerView},
     },

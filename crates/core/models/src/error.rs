@@ -12,7 +12,7 @@ pub enum DomainError {
     /// ...
     EntityDeleted,
     /// Custom error
-    Custom(Box<dyn std::error::Error + Send + 'static>),
+    Other(Box<dyn std::error::Error + Send + 'static>),
 }
 
 impl DomainError {
@@ -21,7 +21,7 @@ impl DomainError {
     where
         E: std::error::Error + Send + 'static,
     {
-        Self::Custom(Box::new(err))
+        Self::Other(Box::new(err))
     }
 }
 
@@ -34,7 +34,7 @@ impl std::fmt::Display for DomainError {
 impl std::error::Error for DomainError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
-            DomainError::Custom(e) => Some(&**e),
+            DomainError::Other(e) => Some(&**e),
             _ => None,
         }
     }

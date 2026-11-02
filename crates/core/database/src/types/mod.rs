@@ -1,3 +1,3 @@
-pub mod closure;
+pub mod commands;
 pub mod query;
 pub mod view;
