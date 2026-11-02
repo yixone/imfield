@@ -619,15 +619,6 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "imfield-models",
-]
-
-[[package]]
-name = "imfield-database-sqlite"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "imfield-database",
- "imfield-models",
  "sqlx",
 ]
 

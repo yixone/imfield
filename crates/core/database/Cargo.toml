@@ -10,3 +10,4 @@ imfield-models = { workspace = true }
 
 # --- Extern ---
 async-trait.workspace = true
+sqlx = { workspace = true, features = ["sqlite", "runtime-tokio", "chrono"] }

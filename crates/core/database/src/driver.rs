@@ -1,10 +1,11 @@
 use std::path::Path;
 
-use imfield_database::{DatabaseError, error::ToDatabaseError};
 use sqlx::{
     SqlitePool,
     sqlite::{SqliteAutoVacuum, SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions},
 };
+
+use crate::{DatabaseError, error::ToDatabaseError};
 
 /// SQLite database migrator
 static MIGRATOR: sqlx::migrate::Migrator = sqlx::migrate!();

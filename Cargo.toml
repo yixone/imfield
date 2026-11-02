@@ -2,7 +2,6 @@
 resolver = "2"
 members = [
     "crates/core/database",
-    "crates/core/database-sqlite",
     "crates/core/models",
     "crates/core/storage",
 
@@ -19,7 +18,6 @@ repository = "https://github.com/yixone/imfield"
 [workspace.dependencies]
 # --- Internal ---
 imfield-database.path = "crates/core/database"
-imfield-database-sqlite.path = "crates/core/database-sqlite"
 imfield-models.path = "crates/core/models"
 imfield-storage.path = "crates/core/storage"
 
