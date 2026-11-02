@@ -1,4 +1,4 @@
-use imfield_domains::types::{files::FileVariant, id::AssetId};
+use imfield_models::types::{files::FileVariant, id::AssetId};
 use imfield_storage_address::{StoragePath, path::PATH_SEP_CHAR};
 
 use crate::StorageError;

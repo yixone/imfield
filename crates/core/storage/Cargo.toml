@@ -5,7 +5,7 @@ edition.workspace = true
 
 [dependencies]
 # --- Interanl ---
-imfield-domains.workspace = true
+imfield-models.workspace = true
 imfield-storage-address.workspace = true
 imfield-utils.workspace = true
 

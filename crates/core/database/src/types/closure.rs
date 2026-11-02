@@ -1,4 +1,4 @@
-use imfield_domains::DomainError;
+use imfield_models::DomainError;
 
 /// A closure that validates and updates an entity
 ///

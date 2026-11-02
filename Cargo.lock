@@ -618,11 +618,19 @@ name = "imfield-database"
 version = "0.1.0"
 dependencies = [
  "async-trait",
- "imfield-domains",
+ "imfield-models",
 ]
 
 [[package]]
-name = "imfield-domains"
+name = "imfield-mimetype"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "sqlx",
+]
+
+[[package]]
+name = "imfield-models"
 version = "0.1.0"
 dependencies = [
  "base64 0.23.1",
@@ -631,14 +639,6 @@ dependencies = [
  "imfield-mimetype",
  "imfield-snowflake",
  "imfield-storage-address",
- "serde",
- "sqlx",
-]
-
-[[package]]
-name = "imfield-mimetype"
-version = "0.1.0"
-dependencies = [
  "serde",
  "sqlx",
 ]
@@ -656,7 +656,7 @@ dependencies = [
 name = "imfield-storage"
 version = "0.1.0"
 dependencies = [
- "imfield-domains",
+ "imfield-models",
  "imfield-storage-address",
  "imfield-utils",
  "libc",
