@@ -2,7 +2,7 @@ use chrono::{DateTime, Utc};
 
 use crate::{
     DomainError,
-    models::file::FileContainer,
+    entities::file::FileContainer,
     types::{
         id::{AssetId, FileContainerId},
         media::{Color, PerceptualHash, ThumbHash},

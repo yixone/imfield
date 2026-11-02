@@ -3,7 +3,7 @@
 //! Defines the data structures and types shared across application
 //! components
 
-pub mod models;
+pub mod entities;
 pub mod types;
 pub mod utils;
 

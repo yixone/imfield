@@ -1,6 +1,6 @@
 use imfield_models::{
     DomainError,
-    models::{
+    entities::{
         Asset,
         asset::{AssetSortBy, AssetState},
     },
