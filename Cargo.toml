@@ -5,10 +5,10 @@ members = [
     "crates/core/models",
 
     "crates/core/storage",
-    "crates/core/storage-address",
 
     "crates/shared/mimetype",
     "crates/shared/snowflake",
+    "crates/shared/storage-address",
     "crates/shared/utils",
 ]
 
@@ -22,11 +22,10 @@ imfield-database.path = "crates/core/database"
 imfield-models.path = "crates/core/models"
 
 imfield-storage.path = "crates/core/storage"
-imfield-storage-address.path = "crates/core/storage-address"
 
 imfield-mimetype.path = "crates/shared/mimetype"
 imfield-snowflake.path = "crates/shared/snowflake"
-
+imfield-storage-address.path = "crates/shared/storage-address"
 imfield-utils.path = "crates/shared/utils"
 
 # --- Extern ---
