@@ -1,12 +1,12 @@
 [package]
-name = "imfield-database-core"
+name = "imfield-database"
 version = "0.1.0"
 edition.workspace = true
 repository.workspace = true
 
 [dependencies]
 # --- Internal ---
-imfield-domains = { workspace = true }
+imfield-models = { workspace = true }
 
 # --- Extern ---
 async-trait.workspace = true

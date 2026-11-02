@@ -1,4 +1,4 @@
-use imfield_domains::{
+use imfield_models::{
     DomainError,
     models::{
         Asset,
