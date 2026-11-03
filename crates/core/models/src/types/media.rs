@@ -59,6 +59,10 @@ impl ThumbHash {
         ThumbHash(bytes)
     }
 
+    pub fn into_inner(self) -> Vec<u8> {
+        self.0
+    }
+
     /// Returns the underlying byte representation as a slice
     pub fn as_slice(&self) -> &[u8] {
         &self.0

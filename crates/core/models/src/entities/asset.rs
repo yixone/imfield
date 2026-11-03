@@ -9,6 +9,94 @@ use crate::{
     },
 };
 
+/// Asset lifecycle state
+#[cfg_attr(
+    feature = "serde",
+    derive(serde::Serialize,),
+    serde(rename_all = "snake_case")
+)]
+#[derive(Debug, Clone, Copy)]
+pub enum AssetState {
+    /// The asset has been created and is awaiting processing
+    Pending,
+    /// The asset is being processed
+    Processing,
+    /// The asset has been processed and is ready for use
+    Ready,
+    /// Processing of the asset failed
+    Failed(AssetStateFailure),
+}
+
+impl AssetState {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            AssetState::Pending => "pending",
+            AssetState::Processing => "processing",
+            AssetState::Ready => "ready",
+            AssetState::Failed(..) => "failed",
+        }
+    }
+
+    pub fn from_persistence(
+        s: &str,
+        failure: Option<AssetStateFailure>,
+    ) -> Result<Self, DomainError> {
+        let state = match s {
+            "pending" => AssetState::Pending,
+            "processing" => AssetState::Processing,
+            "ready" => AssetState::Ready,
+            "failed" => AssetState::Failed(failure.unwrap_or(AssetStateFailure::Unknown)),
+            _ => {
+                return Err(DomainError::PersistenceError);
+            }
+        };
+
+        // Returns an error if there is a cause for an error, even though the state itself is not an error state
+        if matches!(
+            state,
+            AssetState::Pending | AssetState::Processing | AssetState::Ready
+        ) && failure.is_some()
+        {
+            return Err(DomainError::PersistenceError);
+        }
+
+        Ok(state)
+    }
+}
+
+impl std::fmt::Display for AssetState {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
+/// Description of the reason for an asset processing error
+#[cfg_attr(
+    feature = "serde",
+    derive(serde::Serialize,),
+    serde(rename_all = "snake_case")
+)]
+#[cfg_attr(feature = "sqlx", derive(sqlx::Type), sqlx(rename_all = "snake_case"))]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum AssetStateFailure {
+    /// The asset has invalid or unsupported dimensions
+    InvalidDimension,
+
+    /// The asset has an invalid or unsupported duration
+    InvalidDuration,
+
+    /// Media metadata could not be read or parsed
+    ProbeFailed,
+
+    /// The asset's original file is unavailable in storage
+    OriginalFileUnavailable,
+
+    /// Unknown or otherwise unclassified processing error
+    ///
+    /// See the logs for underlying details
+    Unknown,
+}
+
 /// An asset managed by `imfield`
 ///
 /// Represent a single unit of content together with its metadata,
@@ -42,7 +130,6 @@ pub struct Asset {
     /// original file is restored
     pub(crate) is_offline: bool,
 
-    // TODO: Separate features from the asset
     /// Features used to find visually similar assets
     pub(crate) similarity_features: AssetSimilarityFeatures,
 
@@ -123,7 +210,7 @@ impl Asset {
 
     /// Sets the asset's dimension in pixels
     pub fn set_dimension(&mut self, dim: Option<(u32, u32)>) {
-        // TODO: Add validation for (e.g. for (0,0) or (99999999, 999999999))
+        // TODO: Add validation (e.g. for (0,0) or (99999999, 999999999))
         self.dimension = dim;
         self.refresh_updated_at();
     }
@@ -342,45 +429,6 @@ impl Asset {
     }
 }
 
-/// Asset lifecycle state
-#[derive(Debug, Clone, Copy)]
-pub enum AssetState {
-    /// The asset has been created and is awaiting processing
-    Pending,
-    /// The asset is being processed
-    Processing,
-    /// The asset has been processed and is ready for use
-    Ready,
-    /// Processing of the asset failed
-    Failed(AssetStateFailure),
-}
-
-/// Description of the reason for an asset processing error
-#[cfg_attr(
-    feature = "serde",
-    derive(serde::Serialize,),
-    serde(rename_all = "snake_case")
-)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum AssetStateFailure {
-    /// The asset has invalid or unsupported dimensions
-    InvalidDimension,
-
-    /// The asset has an invalid or unsupported duration
-    InvalidDuration,
-
-    /// Media metadata could not be read or parsed
-    ProbeFailed,
-
-    /// The asset's original file is unavailable in storage
-    OriginalFileUnavailable,
-
-    /// Unknown or otherwise unclassified processing error
-    ///
-    /// See the logs for underlying details
-    Unknown,
-}
-
 /// Features used to find visually similar assets
 #[derive(Debug, Default)]
 pub struct AssetSimilarityFeatures {
@@ -507,39 +555,39 @@ impl From<Asset> for AssetPersistence {
 impl TryFrom<AssetPersistence> for Asset {
     type Error = DomainError;
 
-    fn try_from(ap: AssetPersistence) -> Result<Self, Self::Error> {
-        validate_asset_title(&ap.data.title)?;
-        validate_asset_caption(&ap.data.caption)?;
+    fn try_from(a: AssetPersistence) -> Result<Self, Self::Error> {
+        validate_asset_title(&a.data.title)?;
+        validate_asset_caption(&a.data.caption)?;
 
-        if ap.data.parent_id == Some(ap.id) || ap.data.duplicate_of == Some(ap.id) {
+        if a.data.parent_id == Some(a.id) || a.data.duplicate_of == Some(a.id) {
             return Err(DomainError::RelationViolation);
         }
 
-        if ap.deleted_at < Some(ap.created_at) || ap.updated_at < Some(ap.created_at) {
+        if a.deleted_at < Some(a.created_at) || a.updated_at < Some(a.created_at) {
             return Err(DomainError::PersistenceError);
         }
 
         Ok(Asset {
-            id: ap.id,
-            file_container_id: ap.file_container,
-            accent_color: ap.accent_color,
-            dimension: ap.dimension,
-            thumbhash: ap.thumbhash,
-            title: ap.data.title,
-            caption: ap.data.caption,
-            source_url: ap.data.source_url,
-            state: ap.state,
-            is_offline: ap.is_offline,
+            id: a.id,
+            file_container_id: a.file_container,
+            accent_color: a.accent_color,
+            dimension: a.dimension,
+            thumbhash: a.thumbhash,
+            title: a.data.title,
+            caption: a.data.caption,
+            source_url: a.data.source_url,
+            state: a.state,
+            is_offline: a.is_offline,
             similarity_features: AssetSimilarityFeatures {
-                updated_at: ap.features_updated_at,
-                p_hash: ap.p_hash,
-                a_hash: ap.a_hash,
+                updated_at: a.features_updated_at,
+                p_hash: a.p_hash,
+                a_hash: a.a_hash,
             },
-            parent_id: ap.data.parent_id,
-            duplicate_of: ap.data.duplicate_of,
-            created_at: ap.created_at,
-            updated_at: ap.updated_at,
-            deleted_at: ap.deleted_at,
+            parent_id: a.data.parent_id,
+            duplicate_of: a.data.duplicate_of,
+            created_at: a.created_at,
+            updated_at: a.updated_at,
+            deleted_at: a.deleted_at,
         })
     }
 }

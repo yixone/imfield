@@ -21,12 +21,30 @@ pub trait AssetsDatabase: Send + Sync {
     async fn insert(&self, data: (&Asset, &FileContainerView)) -> Result<(), DatabaseError>;
 
     async fn get(&self, id: AssetId) -> Result<Option<AssetView>, DatabaseError> {
-        self.get_ids_many(&[id]).await.map(|a| a.into_iter().next())
+        self.get_by_ids(&[id]).await.map(|a| a.into_iter().next())
     }
 
-    async fn get_ids_many(&self, ids: &[AssetId]) -> Result<Vec<AssetView>, DatabaseError>;
+    async fn get_by_ids(&self, ids: &[AssetId]) -> Result<Vec<AssetView>, DatabaseError>;
+
+    async fn get_by_state(
+        &self,
+        cursor: CursorPagination<AssetId>,
+        state: AssetState,
+    ) -> Result<Vec<AssetId>, DatabaseError>;
 
     async fn get_by_checksum(&self, c: &Sha256Checksum) -> Result<Vec<Asset>, DatabaseError>;
+
+    async fn get_by_parent_id(
+        &self,
+        id: AssetId,
+        cursor: CursorPagination<AssetId>,
+    ) -> Result<Vec<AssetView>, DatabaseError>;
+
+    async fn get_duplicates_of(
+        &self,
+        id: AssetId,
+        cursor: CursorPagination<AssetId>,
+    ) -> Result<Vec<AssetView>, DatabaseError>;
 
     async fn list(
         &self,
