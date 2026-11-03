@@ -12,6 +12,8 @@ serde = [
 ]
 sqlx = ["dep:sqlx", "imfield-snowflake/sqlx", "imfield-mimetype/sqlx"]
 
+persist = []
+
 default = []
 
 [dependencies]

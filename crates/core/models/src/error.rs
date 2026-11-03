@@ -7,10 +7,12 @@ pub enum DomainError {
     AlreadyExists,
     /// Input data violates constraints
     BadInput,
-    /// ...
+    /// Constraint violation
     RelationViolation,
-    /// ...
+    /// Attempt to work with an entity marked as deleted
     EntityDeleted,
+    /// Error during data transition from the persistence layer
+    PersistenceError,
     /// Custom error
     Other(Box<dyn std::error::Error + Send + 'static>),
 }

@@ -70,7 +70,7 @@ pub trait AssetsDatabaseExt: AssetsDatabase {
     }
 
     async fn update_state(&self, id: AssetId, state: AssetState) -> Result<Asset, DatabaseError> {
-        self.update_fn(id, |a| {
+        self.update_fn(id, move |a| {
             a.set_state(state);
             Ok(())
         })

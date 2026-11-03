@@ -6,8 +6,10 @@ repository.workspace = true
 
 [dependencies]
 # --- Internal ---
-imfield-models = { workspace = true }
+imfield-mimetype = { workspace = true, features = ["sqlx"] }
+imfield-models = { workspace = true, features = ["sqlx", "persist"] }
 
 # --- Extern ---
 async-trait.workspace = true
+chrono.workspace = true
 sqlx = { workspace = true, features = ["sqlite", "runtime-tokio", "chrono"] }

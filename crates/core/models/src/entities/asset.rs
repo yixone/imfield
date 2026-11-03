@@ -6,7 +6,6 @@ use crate::{
     types::{
         id::{AssetId, FileContainerId},
         media::{Color, PerceptualHash, ThumbHash},
-        url::Url,
     },
 };
 
@@ -33,7 +32,7 @@ pub struct Asset {
     /// User-defined description of the asset
     pub(crate) caption: Option<String>,
     /// URL of the source from which the asset was obtained, if known
-    pub(crate) source_url: Option<Url>,
+    pub(crate) source_url: Option<String>,
 
     /// Current lifecycle state of the asset
     pub(crate) state: AssetState,
@@ -43,6 +42,7 @@ pub struct Asset {
     /// original file is restored
     pub(crate) is_offline: bool,
 
+    // TODO: Separate features from the asset
     /// Features used to find visually similar assets
     pub(crate) similarity_features: AssetSimilarityFeatures,
 
@@ -63,14 +63,14 @@ pub struct Asset {
     pub(crate) deleted_at: Option<DateTime<Utc>>,
 }
 
-/// Data required to create a new [`Asset`]
-pub struct NewAssetData {
+/// Data required to create an [`Asset`]
+pub struct AssetData {
     /// Initial title of the asset
     pub title: Option<String>,
     /// Initial description of the asset
     pub caption: Option<String>,
     /// URL of the source from which the asset was obtained, if known
-    pub source_url: Option<Url>,
+    pub source_url: Option<String>,
 
     /// Identifier of the parent asset, if any
     pub parent_id: Option<AssetId>,
@@ -83,7 +83,7 @@ impl Asset {
     ///
     /// The asset is initialized in the [`AssetState::Pending`] state,
     /// with default features and the current timestamp
-    pub fn new(id: AssetId, file: &FileContainer, data: NewAssetData) -> Result<Self, DomainError> {
+    pub fn new(id: AssetId, file: &FileContainer, data: AssetData) -> Result<Self, DomainError> {
         // Validates asset data
         validate_asset_title(&data.title)?;
         validate_asset_caption(&data.caption)?;
@@ -217,14 +217,14 @@ impl Asset {
     }
 
     /// Returns the URL of the asset's source, if known
-    pub fn source_url(&self) -> Option<&Url> {
-        self.source_url.as_ref()
+    pub fn source_url(&self) -> Option<&str> {
+        self.source_url.as_deref()
     }
 
     /// Sets the URL of the asset's source
     ///
     /// Pass `None` to clear the source URL
-    pub fn set_source_url(&mut self, source: Option<Url>) {
+    pub fn set_source_url(&mut self, source: Option<String>) {
         self.source_url = source;
         self.refresh_updated_at();
     }
@@ -343,7 +343,7 @@ impl Asset {
 }
 
 /// Asset lifecycle state
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum AssetState {
     /// The asset has been created and is awaiting processing
     Pending,
@@ -361,7 +361,6 @@ pub enum AssetState {
     derive(serde::Serialize,),
     serde(rename_all = "snake_case")
 )]
-#[cfg_attr(feature = "sqlx", derive(sqlx::Type), sqlx(rename_all = "snake_case"))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum AssetStateFailure {
     /// The asset has invalid or unsupported dimensions
@@ -453,4 +452,94 @@ pub enum AssetSortBy {
     CreatedAt,
     DeletedAt,
     OriginalSize,
+}
+
+/// Persisted representation of an [`Asset`] used to reconstruct the domain entity
+#[cfg(feature = "persist")]
+pub struct AssetPersistence {
+    pub id: AssetId,
+    pub file_container: FileContainerId,
+    pub data: AssetData,
+    pub accent_color: Option<Color>,
+    pub dimension: Option<(u32, u32)>,
+    pub thumbhash: Option<ThumbHash>,
+    pub state: AssetState,
+    pub is_offline: bool,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: Option<DateTime<Utc>>,
+    pub deleted_at: Option<DateTime<Utc>>,
+    pub features_updated_at: Option<DateTime<Utc>>,
+    pub p_hash: Option<PerceptualHash>,
+    pub a_hash: Option<PerceptualHash>,
+}
+
+#[cfg(feature = "persist")]
+impl From<Asset> for AssetPersistence {
+    fn from(a: Asset) -> Self {
+        let data = AssetData {
+            title: a.title,
+            caption: a.caption,
+            source_url: a.source_url,
+            parent_id: a.parent_id,
+            duplicate_of: a.duplicate_of,
+        };
+
+        AssetPersistence {
+            id: a.id,
+            file_container: a.file_container_id,
+            data,
+            accent_color: a.accent_color,
+            dimension: a.dimension,
+            thumbhash: a.thumbhash,
+            state: a.state,
+            is_offline: a.is_offline,
+            created_at: a.created_at,
+            updated_at: a.updated_at,
+            deleted_at: a.deleted_at,
+            features_updated_at: a.similarity_features.updated_at,
+            p_hash: a.similarity_features.p_hash,
+            a_hash: a.similarity_features.a_hash,
+        }
+    }
+}
+
+#[cfg(feature = "persist")]
+impl TryFrom<AssetPersistence> for Asset {
+    type Error = DomainError;
+
+    fn try_from(ap: AssetPersistence) -> Result<Self, Self::Error> {
+        validate_asset_title(&ap.data.title)?;
+        validate_asset_caption(&ap.data.caption)?;
+
+        if ap.data.parent_id == Some(ap.id) || ap.data.duplicate_of == Some(ap.id) {
+            return Err(DomainError::RelationViolation);
+        }
+
+        if ap.deleted_at < Some(ap.created_at) || ap.updated_at < Some(ap.created_at) {
+            return Err(DomainError::PersistenceError);
+        }
+
+        Ok(Asset {
+            id: ap.id,
+            file_container_id: ap.file_container,
+            accent_color: ap.accent_color,
+            dimension: ap.dimension,
+            thumbhash: ap.thumbhash,
+            title: ap.data.title,
+            caption: ap.data.caption,
+            source_url: ap.data.source_url,
+            state: ap.state,
+            is_offline: ap.is_offline,
+            similarity_features: AssetSimilarityFeatures {
+                updated_at: ap.features_updated_at,
+                p_hash: ap.p_hash,
+                a_hash: ap.a_hash,
+            },
+            parent_id: ap.data.parent_id,
+            duplicate_of: ap.data.duplicate_of,
+            created_at: ap.created_at,
+            updated_at: ap.updated_at,
+            deleted_at: ap.deleted_at,
+        })
+    }
 }
