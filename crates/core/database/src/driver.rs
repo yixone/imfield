@@ -1,11 +1,16 @@
-use std::path::Path;
+use std::{path::Path, sync::Arc};
 
 use sqlx::{
     SqlitePool,
     sqlite::{SqliteAutoVacuum, SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions},
 };
 
-use crate::{DatabaseError, error::ToDatabaseError};
+use crate::{
+    DatabaseError,
+    error::ToDatabaseError,
+    impls::{assets::SqliteAssetsDatabase, files::SqliteFilesDatabase},
+    ports::RepositoriesContext,
+};
 
 /// SQLite database migrator
 static MIGRATOR: sqlx::migrate::Migrator = sqlx::migrate!();
@@ -45,5 +50,13 @@ impl SqliteDatabase {
     /// Applies migrations to an open database
     pub async fn migrate(&self) -> Result<(), DatabaseError> {
         MIGRATOR.run(&self.pool).await.to_db_error()
+    }
+
+    /// Returns a repository context that uses the current database
+    pub fn repositories(&self) -> RepositoriesContext {
+        RepositoriesContext {
+            assets: Arc::new(SqliteAssetsDatabase::new(self.pool.clone())),
+            files: Arc::new(SqliteFilesDatabase::new(self.pool.clone())),
+        }
     }
 }
