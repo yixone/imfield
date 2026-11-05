@@ -621,6 +621,7 @@ dependencies = [
  "chrono",
  "imfield-mimetype",
  "imfield-models",
+ "imfield-storage-address",
  "sqlx",
 ]
 
@@ -670,6 +671,9 @@ dependencies = [
 [[package]]
 name = "imfield-storage-address"
 version = "0.1.0"
+dependencies = [
+ "sqlx",
+]
 
 [[package]]
 name = "imfield-utils"

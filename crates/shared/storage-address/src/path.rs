@@ -6,6 +6,7 @@ pub const PATH_SEP_CHAR: char = '/';
 /// represent a file system path. It identifies a stored file within
 /// the application's storage namespace
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
 pub struct StoragePath(String);
 
 impl StoragePath {

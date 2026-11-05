@@ -12,7 +12,7 @@ use imfield_models::{
 };
 use sqlx::prelude::FromRow;
 
-#[derive(FromRow)]
+#[derive(FromRow, Clone)]
 pub struct AssetRow {
     pub id: AssetId,
     pub file_container_id: FileContainerId,
@@ -33,7 +33,7 @@ pub struct AssetRow {
     pub deleted_at: Option<DateTime<Utc>>,
 }
 
-#[derive(FromRow)]
+#[derive(FromRow, Clone)]
 pub struct AssetSimilarityFeaturesRow {
     pub id: AssetId,
     pub updated_at: Option<DateTime<Utc>>,
@@ -123,3 +123,6 @@ impl TryFrom<AssetRows> for Asset {
         Asset::try_from(persistence)
     }
 }
+
+coalesced!(AssetRow[id] => AssetSimilarityFeaturesRow[id] as AssetId);
+coalesced!(AssetSimilarityFeaturesRow[id] => AssetRow[id] as AssetId);

@@ -9,6 +9,8 @@ repository.workspace = true
 imfield-mimetype = { workspace = true, features = ["sqlx"] }
 imfield-models = { workspace = true, features = ["sqlx", "persist"] }
 
+imfield-storage-address = { workspace = true, features = ["sqlx"] }
+
 # --- Extern ---
 async-trait.workspace = true
 chrono.workspace = true
