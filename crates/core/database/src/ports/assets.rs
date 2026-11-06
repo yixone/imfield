@@ -3,7 +3,7 @@ use imfield_models::{
     entities::{
         Asset,
         asset::{AssetSortBy, AssetState, AssetView},
-        file::FileContainerView,
+        file::FileContainerResource,
     },
     types::{files::Sha256Checksum, id::AssetId},
 };
@@ -18,7 +18,7 @@ use crate::{
 
 #[async_trait::async_trait]
 pub trait AssetsDatabase: Send + Sync {
-    async fn insert(&self, data: (&Asset, &FileContainerView)) -> Result<(), DatabaseError>;
+    async fn insert(&self, data: (&Asset, &FileContainerResource)) -> Result<(), DatabaseError>;
 
     async fn get(&self, id: AssetId) -> Result<Option<AssetView>, DatabaseError> {
         self.get_by_ids(&[id]).await.map(|a| a.into_iter().next())

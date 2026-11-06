@@ -7,7 +7,7 @@ repository.workspace = true
 [dependencies]
 # --- Internal ---
 imfield-mimetype = { workspace = true, features = ["sqlx"] }
-imfield-models = { workspace = true, features = ["sqlx", "persist"] }
+imfield-models = { workspace = true, features = ["sqlx"] }
 
 imfield-storage-address = { workspace = true, features = ["sqlx"] }
 

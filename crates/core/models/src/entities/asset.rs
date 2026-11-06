@@ -2,10 +2,11 @@ use chrono::{DateTime, Utc};
 
 use crate::{
     DomainError,
-    entities::file::{FileContainer, FileContainerView},
+    entities::file::{FileContainer, FileContainerResource},
     types::{
         id::{AssetId, FileContainerId},
         media::{Color, PerceptualHash, ThumbHash},
+        store::AssetStoreEntry,
     },
 };
 
@@ -15,7 +16,7 @@ pub struct AssetView {
     /// Asset
     pub asset: Asset,
     /// A file container used by an asset
-    pub files: FileContainerView,
+    pub files: FileContainerResource,
 }
 
 /// Asset lifecycle state
@@ -210,6 +211,56 @@ impl Asset {
         };
 
         Ok(entity)
+    }
+
+    pub fn from_stored(entry: AssetStoreEntry) -> Self {
+        Asset {
+            id: entry.id,
+            file_container_id: entry.file_container,
+            accent_color: entry.accent_color,
+            dimension: entry.dimension,
+            thumbhash: entry.thumbhash,
+            title: entry.data.title,
+            caption: entry.data.caption,
+            source_url: entry.data.source_url,
+            state: entry.state,
+            is_offline: entry.is_offline,
+            similarity_features: AssetSimilarityFeatures {
+                updated_at: entry.features_updated_at,
+                p_hash: entry.p_hash,
+                a_hash: entry.a_hash,
+            },
+            parent_id: entry.data.parent_id,
+            duplicate_of: entry.data.duplicate_of,
+            created_at: entry.created_at,
+            updated_at: entry.updated_at,
+            deleted_at: entry.deleted_at,
+        }
+    }
+
+    pub fn to_stored(self) -> AssetStoreEntry {
+        AssetStoreEntry {
+            id: self.id,
+            file_container: self.file_container_id,
+            data: AssetData {
+                title: self.title,
+                caption: self.caption,
+                source_url: self.source_url,
+                parent_id: self.parent_id,
+                duplicate_of: self.duplicate_of,
+            },
+            accent_color: self.accent_color,
+            dimension: self.dimension,
+            thumbhash: self.thumbhash,
+            state: self.state,
+            is_offline: self.is_offline,
+            created_at: self.created_at,
+            updated_at: self.updated_at,
+            deleted_at: self.deleted_at,
+            features_updated_at: self.similarity_features.updated_at,
+            p_hash: self.similarity_features.p_hash,
+            a_hash: self.similarity_features.a_hash,
+        }
     }
 
     /// Returns the asset's identifier
@@ -509,94 +560,4 @@ pub enum AssetSortBy {
     CreatedAt,
     DeletedAt,
     OriginalSize,
-}
-
-/// Persisted representation of an [`Asset`] used to reconstruct the domain entity
-#[cfg(feature = "persist")]
-pub struct AssetPersistence {
-    pub id: AssetId,
-    pub file_container: FileContainerId,
-    pub data: AssetData,
-    pub accent_color: Option<Color>,
-    pub dimension: Option<(u32, u32)>,
-    pub thumbhash: Option<ThumbHash>,
-    pub state: AssetState,
-    pub is_offline: bool,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: Option<DateTime<Utc>>,
-    pub deleted_at: Option<DateTime<Utc>>,
-    pub features_updated_at: Option<DateTime<Utc>>,
-    pub p_hash: Option<PerceptualHash>,
-    pub a_hash: Option<PerceptualHash>,
-}
-
-#[cfg(feature = "persist")]
-impl From<Asset> for AssetPersistence {
-    fn from(a: Asset) -> Self {
-        let data = AssetData {
-            title: a.title,
-            caption: a.caption,
-            source_url: a.source_url,
-            parent_id: a.parent_id,
-            duplicate_of: a.duplicate_of,
-        };
-
-        AssetPersistence {
-            id: a.id,
-            file_container: a.file_container_id,
-            data,
-            accent_color: a.accent_color,
-            dimension: a.dimension,
-            thumbhash: a.thumbhash,
-            state: a.state,
-            is_offline: a.is_offline,
-            created_at: a.created_at,
-            updated_at: a.updated_at,
-            deleted_at: a.deleted_at,
-            features_updated_at: a.similarity_features.updated_at,
-            p_hash: a.similarity_features.p_hash,
-            a_hash: a.similarity_features.a_hash,
-        }
-    }
-}
-
-#[cfg(feature = "persist")]
-impl TryFrom<AssetPersistence> for Asset {
-    type Error = DomainError;
-
-    fn try_from(a: AssetPersistence) -> Result<Self, Self::Error> {
-        validate_asset_title(&a.data.title)?;
-        validate_asset_caption(&a.data.caption)?;
-
-        if a.data.parent_id == Some(a.id) || a.data.duplicate_of == Some(a.id) {
-            return Err(DomainError::RelationViolation);
-        }
-
-        if a.deleted_at < Some(a.created_at) || a.updated_at < Some(a.created_at) {
-            return Err(DomainError::PersistenceError);
-        }
-
-        Ok(Asset {
-            id: a.id,
-            file_container_id: a.file_container,
-            accent_color: a.accent_color,
-            dimension: a.dimension,
-            thumbhash: a.thumbhash,
-            title: a.data.title,
-            caption: a.data.caption,
-            source_url: a.data.source_url,
-            state: a.state,
-            is_offline: a.is_offline,
-            similarity_features: AssetSimilarityFeatures {
-                updated_at: a.features_updated_at,
-                p_hash: a.p_hash,
-                a_hash: a.a_hash,
-            },
-            parent_id: a.data.parent_id,
-            duplicate_of: a.data.duplicate_of,
-            created_at: a.created_at,
-            updated_at: a.updated_at,
-            deleted_at: a.deleted_at,
-        })
-    }
 }

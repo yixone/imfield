@@ -1,5 +1,5 @@
 use imfield_models::{
-    entities::{File, FileContainer, file::FileContainerView},
+    entities::{File, FileContainer, file::FileContainerResource},
     types::id::{FileContainerId, FileKey},
 };
 use sqlx::SqlitePool;
@@ -30,7 +30,7 @@ impl FilesDatabase for SqliteFilesDatabase {
     async fn get_container_by_id(
         &self,
         id: &FileContainerId,
-    ) -> Result<FileContainerView, DatabaseError> {
+    ) -> Result<FileContainerResource, DatabaseError> {
         todo!()
     }
 

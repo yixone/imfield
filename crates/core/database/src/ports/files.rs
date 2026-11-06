@@ -1,6 +1,6 @@
 use imfield_models::{
     DomainError,
-    entities::{File, FileContainer, file::FileContainerView},
+    entities::{File, FileContainer, file::FileContainerResource},
     types::id::{FileContainerId, FileKey},
 };
 
@@ -16,7 +16,7 @@ pub trait FilesDatabase: Send + Sync {
     async fn get_container_by_id(
         &self,
         id: &FileContainerId,
-    ) -> Result<FileContainerView, DatabaseError>;
+    ) -> Result<FileContainerResource, DatabaseError>;
 
     async fn get_file(&self, key: &FileKey) -> Result<Option<File>, DatabaseError>;
 

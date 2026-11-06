@@ -4,6 +4,8 @@ use imfield_models::types::{files::FileVariant, id::FileContainerId};
 use imfield_storage_address::StoragePath;
 use sqlx::prelude::FromRow;
 
+pub type ContaineredFilesRow = (FileContainerRow, Vec<FileRow>);
+
 #[derive(FromRow, Clone)]
 pub struct FileContainerRow {
     pub id: FileContainerId,
@@ -21,9 +23,4 @@ pub struct FileRow {
     pub size_bytes: u64,
     pub mimetype: MimeType,
     pub duration_ms: Option<i64>,
-}
-
-pub struct FileContainerRows {
-    pub container: FileContainerRow,
-    pub files: Vec<FileRow>,
 }

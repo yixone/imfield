@@ -7,14 +7,15 @@ use imfield_storage_address::StoragePath;
 use crate::types::{
     files::{FileVariant, Sha256Checksum},
     id::{FileContainerId, FileKey},
+    store::{FileContainerStoreEntry, FileStoreEntry},
 };
 
 /// Virtual file container resource, including all embedded data
 #[derive(Debug)]
-pub struct FileContainerView {
-    /// File container
+pub struct FileContainerResource {
+    /// File container model
     pub container: FileContainer,
-    /// Container files
+    /// Container's files
     pub files: Vec<File>,
 }
 
@@ -46,6 +47,24 @@ impl FileContainer {
             original_checksum: original.checksum,
             original_filename: original.filename,
             original_mimekind: original.mimekind,
+        }
+    }
+
+    pub fn from_stored(entry: FileContainerStoreEntry) -> Self {
+        FileContainer {
+            id: entry.id,
+            original_checksum: entry.original_checksum,
+            original_filename: entry.original_filename,
+            original_mimekind: entry.original_mimekind,
+        }
+    }
+
+    pub fn to_stored(self) -> FileContainerStoreEntry {
+        FileContainerStoreEntry {
+            id: self.id,
+            original_checksum: self.original_checksum,
+            original_filename: self.original_filename,
+            original_mimekind: self.original_mimekind,
         }
     }
 
@@ -107,6 +126,31 @@ impl File {
             size_bytes,
             mimetype,
             duration,
+        }
+    }
+
+    pub fn from_stored(entry: FileStoreEntry) -> Self {
+        let key = FileKey(entry.container, entry.variant);
+
+        File {
+            key,
+            created_at: entry.created_at,
+            path: entry.path,
+            size_bytes: entry.size_bytes,
+            mimetype: entry.mimetype,
+            duration: entry.duration,
+        }
+    }
+
+    pub fn to_stored(self) -> FileStoreEntry {
+        FileStoreEntry {
+            container: self.key.0,
+            variant: self.key.1,
+            created_at: self.created_at,
+            path: self.path,
+            size_bytes: self.size_bytes,
+            mimetype: self.mimetype,
+            duration: self.duration,
         }
     }
 
