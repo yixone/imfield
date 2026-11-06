@@ -12,8 +12,8 @@ use crate::{
 
 /// Virtual asset resource, including all embedded data
 #[derive(Debug)]
-pub struct AssetView {
-    /// Asset
+pub struct AssetResource {
+    /// Asset model
     pub asset: Asset,
     /// A file container used by an asset
     pub files: FileContainerResource,

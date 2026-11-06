@@ -1,7 +1,7 @@
 use imfield_models::{
     entities::{
         Asset,
-        asset::{AssetSortBy, AssetState, AssetView},
+        asset::{AssetResource, AssetSortBy, AssetState},
         file::FileContainerResource,
     },
     types::{files::Sha256Checksum, id::AssetId},
@@ -34,7 +34,7 @@ impl AssetsDatabase for SqliteAssetsDatabase {
         todo!()
     }
 
-    async fn get_by_ids(&self, ids: &[AssetId]) -> Result<Vec<AssetView>, DatabaseError> {
+    async fn get_by_ids(&self, ids: &[AssetId]) -> Result<Vec<AssetResource>, DatabaseError> {
         todo!()
     }
 
@@ -54,7 +54,7 @@ impl AssetsDatabase for SqliteAssetsDatabase {
         &self,
         id: AssetId,
         cursor: CursorPagination<AssetId>,
-    ) -> Result<Vec<AssetView>, DatabaseError> {
+    ) -> Result<Vec<AssetResource>, DatabaseError> {
         todo!()
     }
 
@@ -62,7 +62,7 @@ impl AssetsDatabase for SqliteAssetsDatabase {
         &self,
         id: AssetId,
         cursor: CursorPagination<AssetId>,
-    ) -> Result<Vec<AssetView>, DatabaseError> {
+    ) -> Result<Vec<AssetResource>, DatabaseError> {
         todo!()
     }
 
@@ -71,7 +71,7 @@ impl AssetsDatabase for SqliteAssetsDatabase {
         cursor: CursorPagination<AssetId>,
         ordering: (AssetSortBy, SortOrder),
         deleted: DeletedVisibility,
-    ) -> Result<Vec<AssetView>, DatabaseError> {
+    ) -> Result<Vec<AssetResource>, DatabaseError> {
         todo!()
     }
 
@@ -79,7 +79,7 @@ impl AssetsDatabase for SqliteAssetsDatabase {
         &self,
         limit: u32,
         deleted: DeletedVisibility,
-    ) -> Result<Vec<AssetView>, DatabaseError> {
+    ) -> Result<Vec<AssetResource>, DatabaseError> {
         todo!()
     }
 

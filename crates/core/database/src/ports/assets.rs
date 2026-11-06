@@ -2,7 +2,7 @@ use imfield_models::{
     DomainError,
     entities::{
         Asset,
-        asset::{AssetSortBy, AssetState, AssetView},
+        asset::{AssetResource, AssetSortBy, AssetState},
         file::FileContainerResource,
     },
     types::{files::Sha256Checksum, id::AssetId},
@@ -20,11 +20,11 @@ use crate::{
 pub trait AssetsDatabase: Send + Sync {
     async fn insert(&self, data: (&Asset, &FileContainerResource)) -> Result<(), DatabaseError>;
 
-    async fn get(&self, id: AssetId) -> Result<Option<AssetView>, DatabaseError> {
+    async fn get(&self, id: AssetId) -> Result<Option<AssetResource>, DatabaseError> {
         self.get_by_ids(&[id]).await.map(|a| a.into_iter().next())
     }
 
-    async fn get_by_ids(&self, ids: &[AssetId]) -> Result<Vec<AssetView>, DatabaseError>;
+    async fn get_by_ids(&self, ids: &[AssetId]) -> Result<Vec<AssetResource>, DatabaseError>;
 
     async fn get_by_state(
         &self,
@@ -38,26 +38,26 @@ pub trait AssetsDatabase: Send + Sync {
         &self,
         id: AssetId,
         cursor: CursorPagination<AssetId>,
-    ) -> Result<Vec<AssetView>, DatabaseError>;
+    ) -> Result<Vec<AssetResource>, DatabaseError>;
 
     async fn get_duplicates_of(
         &self,
         id: AssetId,
         cursor: CursorPagination<AssetId>,
-    ) -> Result<Vec<AssetView>, DatabaseError>;
+    ) -> Result<Vec<AssetResource>, DatabaseError>;
 
     async fn list(
         &self,
         cursor: CursorPagination<AssetId>,
         ordering: (AssetSortBy, SortOrder),
         deleted: DeletedVisibility,
-    ) -> Result<Vec<AssetView>, DatabaseError>;
+    ) -> Result<Vec<AssetResource>, DatabaseError>;
 
     async fn random(
         &self,
         limit: u32,
         deleted: DeletedVisibility,
-    ) -> Result<Vec<AssetView>, DatabaseError>;
+    ) -> Result<Vec<AssetResource>, DatabaseError>;
 
     async fn count(&self, deleted: DeletedVisibility) -> Result<u64, DatabaseError>;
 

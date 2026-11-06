@@ -11,7 +11,7 @@ use crate::types::{
 };
 
 /// Virtual file container resource, including all embedded data
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct FileContainerResource {
     /// File container model
     pub container: FileContainer,
@@ -19,7 +19,7 @@ pub struct FileContainerResource {
     pub files: Vec<File>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct FileContainer {
     /// File container id
     pub(crate) id: FileContainerId,
@@ -89,7 +89,7 @@ impl FileContainer {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct File {
     /// File key (FileContainerId + Variant)
     pub(crate) key: FileKey,
