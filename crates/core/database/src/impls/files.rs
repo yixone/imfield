@@ -1,5 +1,5 @@
 use imfield_models::{
-    entities::{File, FileContainer},
+    entities::{File, FileContainer, file::FileContainerView},
     types::id::{FileContainerId, FileKey},
 };
 use sqlx::SqlitePool;
@@ -7,10 +7,7 @@ use sqlx::SqlitePool;
 use crate::{
     DatabaseError,
     ports::files::FilesDatabase,
-    types::{
-        commands::{DeleteFn, UpdateFn},
-        view::FileContainerView,
-    },
+    types::commands::{DeleteFn, UpdateFn},
 };
 
 pub struct SqliteFilesDatabase {

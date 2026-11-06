@@ -9,6 +9,15 @@ use crate::types::{
     id::{FileContainerId, FileKey},
 };
 
+/// Virtual file container resource, including all embedded data
+#[derive(Debug)]
+pub struct FileContainerView {
+    /// File container
+    pub container: FileContainer,
+    /// Container files
+    pub files: Vec<File>,
+}
+
 #[derive(Debug)]
 pub struct FileContainer {
     /// File container id

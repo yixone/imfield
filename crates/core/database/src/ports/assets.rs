@@ -2,7 +2,8 @@ use imfield_models::{
     DomainError,
     entities::{
         Asset,
-        asset::{AssetSortBy, AssetState},
+        asset::{AssetSortBy, AssetState, AssetView},
+        file::FileContainerView,
     },
     types::{files::Sha256Checksum, id::AssetId},
 };
@@ -12,7 +13,6 @@ use crate::{
     types::{
         commands::{DeleteFn, UpdateFn},
         query::{CursorPagination, DeletedVisibility, SortOrder},
-        view::{AssetView, FileContainerView},
     },
 };
 

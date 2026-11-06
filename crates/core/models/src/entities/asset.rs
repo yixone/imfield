@@ -2,12 +2,21 @@ use chrono::{DateTime, Utc};
 
 use crate::{
     DomainError,
-    entities::file::FileContainer,
+    entities::file::{FileContainer, FileContainerView},
     types::{
         id::{AssetId, FileContainerId},
         media::{Color, PerceptualHash, ThumbHash},
     },
 };
+
+/// Virtual asset resource, including all embedded data
+#[derive(Debug)]
+pub struct AssetView {
+    /// Asset
+    pub asset: Asset,
+    /// A file container used by an asset
+    pub files: FileContainerView,
+}
 
 /// Asset lifecycle state
 #[cfg_attr(

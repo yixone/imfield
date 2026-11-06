@@ -1,15 +1,12 @@
 use imfield_models::{
     DomainError,
-    entities::{File, FileContainer},
+    entities::{File, FileContainer, file::FileContainerView},
     types::id::{FileContainerId, FileKey},
 };
 
 use crate::{
     DatabaseError,
-    types::{
-        commands::{DeleteFn, UpdateFn},
-        view::FileContainerView,
-    },
+    types::commands::{DeleteFn, UpdateFn},
 };
 
 #[async_trait::async_trait]

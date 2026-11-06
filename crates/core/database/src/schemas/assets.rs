@@ -123,6 +123,3 @@ impl TryFrom<AssetRows> for Asset {
         Asset::try_from(persistence)
     }
 }
-
-coalesced!(AssetRow[id] => AssetSimilarityFeaturesRow[id] as AssetId);
-coalesced!(AssetSimilarityFeaturesRow[id] => AssetRow[id] as AssetId);

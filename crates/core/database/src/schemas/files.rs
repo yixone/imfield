@@ -1,5 +1,5 @@
 use chrono::{DateTime, Utc};
-use imfield_mimetype::MimeType;
+use imfield_mimetype::{MimeKind, MimeType};
 use imfield_models::types::{files::FileVariant, id::FileContainerId};
 use imfield_storage_address::StoragePath;
 use sqlx::prelude::FromRow;
@@ -7,6 +7,9 @@ use sqlx::prelude::FromRow;
 #[derive(FromRow, Clone)]
 pub struct FileContainerRow {
     pub id: FileContainerId,
+    pub original_checksum: Vec<u8>,
+    pub original_filename: Option<String>,
+    pub original_mimekind: MimeKind,
 }
 
 #[derive(FromRow, Clone)]
@@ -24,6 +27,3 @@ pub struct FileContainerRows {
     pub container: FileContainerRow,
     pub files: Vec<FileRow>,
 }
-
-coalesced!(FileRow[container_id] => FileContainerRow[id] as FileContainerId);
-coalesced!(FileContainerRow[id] => FileRow[container_id] as FileContainerId);
