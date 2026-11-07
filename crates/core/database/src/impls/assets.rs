@@ -10,6 +10,8 @@ use sqlx::SqlitePool;
 
 use crate::{
     DatabaseError,
+    error::ToDatabaseError,
+    impls::queries,
     ports::assets::AssetsDatabase,
     types::{
         commands::{DeleteFn, UpdateFn},
@@ -31,7 +33,81 @@ impl SqliteAssetsDatabase {
 #[async_trait::async_trait]
 impl AssetsDatabase for SqliteAssetsDatabase {
     async fn insert(&self, data: (&Asset, &FileContainerResource)) -> Result<(), DatabaseError> {
-        todo!()
+        let mut tx = self.pool.begin().await.to_db_error()?;
+
+        queries::files::insert_file_container(&data.1.container, &mut tx).await?;
+        for f in &data.1.files {
+            queries::files::insert_file(f, &mut tx).await?;
+        }
+
+        let asset = data.0;
+        sqlx::query(
+            "
+            INSERT INTO assets (
+                id, file_container_id,
+                accent_color, width, height, thumbhash,
+                title, caption, source_url,
+                state, state_failure, is_offline,
+                parent_id, duplicate_of,
+                created_at, updated_at, deleted_at
+            )
+            VALUES (
+                ?, ?,
+                ?, ?, ?, ?,
+                ?, ?, ?,
+                ?, ?, ?,
+                ?, ?,
+                ?, ?, ?
+            )
+            ",
+        )
+        .bind(asset.id())
+        .bind(asset.file_group_id())
+        .bind(asset.accent_color())
+        .bind(asset.width())
+        .bind(asset.height())
+        .bind(asset.thumbhash().map(|t| t.as_slice()))
+        .bind(asset.title())
+        .bind(asset.caption())
+        .bind(asset.source_url())
+        .bind(asset.state().to_string())
+        .bind(match asset.state() {
+            AssetState::Failed(f) => Some(f),
+            _ => None,
+        })
+        .bind(asset.is_offline())
+        .bind(asset.parent_id())
+        .bind(asset.duplicate_of())
+        .bind(asset.created_at())
+        .bind(asset.updated_at())
+        .bind(asset.deleted_at())
+        .execute(&mut *tx)
+        .await
+        .to_db_error()?;
+
+        sqlx::query(
+            "
+            INSERT INTO assets_features (
+                id, updated_at,
+                p_hash, a_hash
+            )
+            VALUES (
+                ?, ?,
+                ?, ?
+            )
+            ",
+        )
+        .bind(asset.id())
+        .bind(asset.similarity_features().updated_at())
+        .bind(asset.similarity_features().p_hash())
+        .bind(asset.similarity_features().a_hash())
+        .execute(&mut *tx)
+        .await
+        .to_db_error()?;
+
+        tx.commit().await.to_db_error()?;
+
+        Ok(())
     }
 
     async fn get_by_ids(&self, ids: &[AssetId]) -> Result<Vec<AssetResource>, DatabaseError> {

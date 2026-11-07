@@ -534,6 +534,10 @@ impl AssetSimilarityFeatures {
     fn refresh_updated_at(&mut self) {
         self.updated_at = Some(Utc::now());
     }
+
+    pub fn updated_at(&self) -> Option<DateTime<Utc>> {
+        self.updated_at
+    }
 }
 
 /// Validates the asset name
