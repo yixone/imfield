@@ -15,3 +15,6 @@ imfield-storage-address = { workspace = true, features = ["sqlx"] }
 async-trait.workspace = true
 chrono.workspace = true
 sqlx = { workspace = true, features = ["sqlite", "runtime-tokio", "chrono"] }
+
+[dev-dependencies]
+imfield-snowflake.workspace = true

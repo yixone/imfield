@@ -621,6 +621,7 @@ dependencies = [
  "chrono",
  "imfield-mimetype",
  "imfield-models",
+ "imfield-snowflake",
  "imfield-storage-address",
  "sqlx",
 ]
