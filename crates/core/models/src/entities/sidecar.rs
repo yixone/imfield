@@ -18,6 +18,16 @@ pub enum SidecarType {
     LoopPreview,
 }
 
+impl SidecarType {
+    /// Returns the [`SidecarType`] as a string
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Thumbnail => "thumbnail",
+            Self::LoopPreview => "loop_preview",
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct Sidecar {
     /// ID of the sidecar source file

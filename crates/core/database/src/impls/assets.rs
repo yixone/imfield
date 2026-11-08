@@ -2,7 +2,7 @@ use imfield_models::{
     entities::{
         Asset,
         asset::{AssetResource, AssetSortBy, AssetState},
-        file::FileContainerResource,
+        file::FileResource,
     },
     types::{files::Sha256Checksum, id::AssetId},
 };
@@ -33,7 +33,7 @@ impl SqliteAssetsDatabase {
 
 #[async_trait::async_trait]
 impl AssetsDatabase for SqliteAssetsDatabase {
-    async fn insert(&self, data: (&Asset, &FileContainerResource)) -> Result<(), DatabaseError> {
+    async fn insert(&self, data: (&Asset, &FileResource)) -> Result<(), DatabaseError> {
         let mut tx = self.pool.begin().await.to_db_error()?;
 
         queries::files::insert_file_container(&data.1.container, &mut tx).await?;
@@ -63,7 +63,7 @@ impl AssetsDatabase for SqliteAssetsDatabase {
             ",
         )
         .bind(asset.id())
-        .bind(asset.file_group_id())
+        .bind(asset.file_id())
         .bind(asset.accent_color())
         .bind(asset.width())
         .bind(asset.height())

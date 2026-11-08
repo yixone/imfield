@@ -2,11 +2,10 @@ use chrono::{DateTime, Utc};
 
 use crate::{
     DomainError,
-    entities::file::{FileContainer, FileContainerResource},
+    entities::{File, file::FileResource},
     types::{
-        id::{AssetId, FileContainerId},
+        id::{AssetId, FileId},
         media::{Color, PerceptualHash, ThumbHash},
-        store::AssetStoreEntry,
     },
 };
 
@@ -16,7 +15,7 @@ pub struct AssetResource {
     /// Asset model
     pub asset: Asset,
     /// A file container used by an asset
-    pub files: FileContainerResource,
+    pub files: FileResource,
 }
 
 /// Asset lifecycle state
@@ -115,8 +114,8 @@ pub enum AssetStateFailure {
 pub struct Asset {
     /// Unique identifier of the asset
     pub(crate) id: AssetId,
-    /// Identifier of the asset's file container
-    pub(crate) file_container_id: FileContainerId,
+    /// Identifier of the asset's file
+    pub(crate) file_id: FileId,
 
     /// Asset accent color
     pub(crate) accent_color: Option<Color>,
@@ -175,12 +174,29 @@ pub struct AssetData {
     pub duplicate_of: Option<AssetId>,
 }
 
+pub struct AssetDbEntry {
+    pub id: AssetId,
+    pub file: FileId,
+    pub data: AssetData,
+    pub accent_color: Option<Color>,
+    pub dimension: Option<(u32, u32)>,
+    pub thumbhash: Option<ThumbHash>,
+    pub state: AssetState,
+    pub is_offline: bool,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: Option<DateTime<Utc>>,
+    pub deleted_at: Option<DateTime<Utc>>,
+    pub features_updated_at: Option<DateTime<Utc>>,
+    pub p_hash: Option<PerceptualHash>,
+    pub a_hash: Option<PerceptualHash>,
+}
+
 impl Asset {
     /// Creates a new [`Asset`] and validates its initial data
     ///
     /// The asset is initialized in the [`AssetState::Pending`] state,
     /// with default features and the current timestamp
-    pub fn new(id: AssetId, file: &FileContainer, data: AssetData) -> Result<Self, DomainError> {
+    pub fn new(id: AssetId, file: &File, data: AssetData) -> Result<Self, DomainError> {
         // Validates asset data
         validate_asset_title(&data.title)?;
         validate_asset_caption(&data.caption)?;
@@ -197,7 +213,7 @@ impl Asset {
             accent_color: None,
             dimension: None,
             thumbhash: None,
-            file_container_id: file.id().clone(),
+            file_id: file.id().clone(),
             title: data.title,
             caption: data.caption,
             source_url: data.source_url,
@@ -213,10 +229,10 @@ impl Asset {
         Ok(entity)
     }
 
-    pub fn from_stored(entry: AssetStoreEntry) -> Self {
+    pub fn from_db(entry: AssetDbEntry) -> Self {
         Asset {
             id: entry.id,
-            file_container_id: entry.file_container,
+            file_id: entry.file,
             accent_color: entry.accent_color,
             dimension: entry.dimension,
             thumbhash: entry.thumbhash,
@@ -238,10 +254,10 @@ impl Asset {
         }
     }
 
-    pub fn to_stored(self) -> AssetStoreEntry {
-        AssetStoreEntry {
+    pub fn to_db(self) -> AssetDbEntry {
+        AssetDbEntry {
             id: self.id,
-            file_container: self.file_container_id,
+            file: self.file_id,
             data: AssetData {
                 title: self.title,
                 caption: self.caption,
@@ -333,8 +349,8 @@ impl Asset {
     }
 
     /// Returns the identifier of the asset's file group
-    pub fn file_group_id(&self) -> &FileContainerId {
-        &self.file_container_id
+    pub fn file_id(&self) -> &FileId {
+        &self.file_id
     }
 
     /// Returns the asset's title, if set

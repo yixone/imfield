@@ -1,6 +1,6 @@
 use imfield_models::{
     DomainError,
-    entities::{Asset, asset::AssetResource, file::FileContainerResource},
+    entities::{Asset, asset::AssetResource, file::FileResource},
 };
 use sqlx::SqliteConnection;
 
@@ -45,7 +45,7 @@ impl AssetHydrator {
     ) -> Result<AssetResource, DatabaseError> {
         let asset = AssetHydrator::hydrate_asset(row, conn).await?;
 
-        let file_cont = queries::files::load_container(asset.file_group_id(), conn)
+        let file_cont = queries::files::load_container(asset.file_id(), conn)
             .await?
             .ok_or(DomainError::PersistenceError)?;
         let files = FileHydrator::hydrate_container_resource(file_cont, conn).await?;
@@ -62,7 +62,7 @@ impl AssetHydrator {
 
         let ids = assets
             .iter()
-            .map(|a| a.file_group_id().clone())
+            .map(|a| a.file_id().clone())
             .collect::<Vec<_>>();
         let file_cont = queries::files::load_container_many(&ids, conn).await?;
         let files = FileHydrator::hydrate_container_resource_many(file_cont, conn).await?;
@@ -78,7 +78,7 @@ impl FileHydrator {
     pub async fn hydrate_container_resource(
         row: FileContainerRow,
         conn: &mut SqliteConnection,
-    ) -> Result<FileContainerResource, DatabaseError> {
+    ) -> Result<FileResource, DatabaseError> {
         let files = queries::files::load_container_files(&row.id, conn).await?;
 
         let container = FileRowMapper::to_container_domain(row)?;
@@ -91,7 +91,7 @@ impl FileHydrator {
     pub async fn hydrate_container_resource_many(
         rows: Vec<FileContainerRow>,
         conn: &mut SqliteConnection,
-    ) -> Result<Vec<FileContainerResource>, DatabaseError> {
+    ) -> Result<Vec<FileResource>, DatabaseError> {
         let ids = rows.iter().map(|g| g.id.clone()).collect::<Vec<_>>();
         let files = queries::files::load_container_files_many(&ids, conn).await?;
 

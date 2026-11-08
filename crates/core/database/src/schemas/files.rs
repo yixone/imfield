@@ -4,7 +4,7 @@ use chrono::{DateTime, Utc};
 use imfield_mimetype::{MimeKind, MimeType};
 use imfield_models::{
     DomainError,
-    entities::{File, FileContainer, file::FileContainerResource},
+    entities::{File, FileContainer, file::FileResource},
     types::{
         files::{FileVariant, Sha256Checksum},
         id::FileContainerId,
@@ -81,14 +81,11 @@ impl FileRowMapper {
             .collect()
     }
 
-    pub fn to_resource(container: FileContainer, files: Vec<File>) -> FileContainerResource {
-        FileContainerResource { container, files }
+    pub fn to_resource(container: FileContainer, files: Vec<File>) -> FileResource {
+        FileResource { container, files }
     }
 
-    pub fn to_resource_many(
-        containers: Vec<FileContainer>,
-        files: Vec<File>,
-    ) -> Vec<FileContainerResource> {
+    pub fn to_resource_many(containers: Vec<FileContainer>, files: Vec<File>) -> Vec<FileResource> {
         let mut index: HashMap<FileContainerId, Vec<File>> =
             HashMap::with_capacity(containers.len());
         for f in files {
@@ -103,7 +100,7 @@ impl FileRowMapper {
         let mut resources = Vec::with_capacity(containers.len());
         for c in containers {
             let f = index.get(c.id()).cloned().unwrap_or(Vec::new());
-            resources.push(FileContainerResource {
+            resources.push(FileResource {
                 container: c,
                 files: f,
             });

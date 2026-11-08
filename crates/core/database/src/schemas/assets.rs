@@ -6,7 +6,7 @@ use imfield_models::{
     entities::{
         Asset,
         asset::{AssetData, AssetResource, AssetState, AssetStateFailure},
-        file::FileContainerResource,
+        file::FileResource,
     },
     types::{
         id::{AssetId, FileContainerId},
@@ -109,14 +109,14 @@ impl AssetRowMapper {
     }
 
     /// Creates an asset resource from a domain entity and its file container
-    pub fn to_resource(asset: Asset, files: FileContainerResource) -> AssetResource {
+    pub fn to_resource(asset: Asset, files: FileResource) -> AssetResource {
         AssetResource { asset, files }
     }
 
     /// Creates multiple asset resources by matching file containers to assets
     pub fn to_resource_many(
         assets: Vec<Asset>,
-        files: Vec<FileContainerResource>,
+        files: Vec<FileResource>,
     ) -> Result<Vec<AssetResource>, DomainError> {
         let mut index = HashMap::with_capacity(files.len());
         for f in files {
@@ -129,7 +129,7 @@ impl AssetRowMapper {
         let mut resources = Vec::with_capacity(assets.len());
         for a in assets {
             let f = index
-                .get(a.file_group_id())
+                .get(a.file_id())
                 .ok_or(DomainError::PersistenceError)?;
 
             resources.push(AssetResource {
