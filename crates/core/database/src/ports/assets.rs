@@ -1,9 +1,8 @@
 use imfield_models::{
     DomainError,
     entities::{
-        Asset,
+        Asset, File,
         asset::{AssetResource, AssetSortBy, AssetState},
-        file::FileResource,
     },
     types::{files::Sha256Checksum, id::AssetId},
 };
@@ -18,7 +17,7 @@ use crate::{
 
 #[async_trait::async_trait]
 pub trait AssetsDatabase: Send + Sync {
-    async fn insert(&self, data: (&Asset, &FileResource)) -> Result<(), DatabaseError>;
+    async fn insert(&self, data: (&Asset, &File)) -> Result<(), DatabaseError>;
 
     async fn get(&self, id: AssetId) -> Result<Option<AssetResource>, DatabaseError> {
         self.get_by_ids(&[id]).await.map(|a| a.into_iter().next())

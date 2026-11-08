@@ -4,31 +4,36 @@ use chrono::{DateTime, Utc};
 use imfield_mimetype::{MimeKind, MimeType};
 use imfield_models::{
     DomainError,
-    entities::{File, FileContainer, file::FileResource},
-    types::{
-        files::{FileVariant, Sha256Checksum},
-        id::FileContainerId,
-        store::{FileContainerStoreEntry, FileStoreEntry},
+    entities::{
+        File, Sidecar,
+        file::{FileData, FileDbEntry, FileResource},
+        sidecar::{SidecarData, SidecarDbEntry, SidecarType},
     },
+    types::{files::Sha256Checksum, id::FileId},
 };
 use imfield_storage_address::StoragePath;
 use sqlx::prelude::FromRow;
 
 #[derive(FromRow, Clone)]
-pub struct FileContainerRow {
-    pub id: FileContainerId,
-    pub original_checksum: Vec<u8>,
+pub struct FileRow {
+    pub id: FileId,
+    pub created_at: DateTime<Utc>,
+    pub path: StoragePath,
+    pub size_bytes: i64,
+    pub mimetype: MimeType,
+    pub mimekind: MimeKind,
+    pub duration_ms: Option<i64>,
     pub original_filename: Option<String>,
-    pub original_mimekind: MimeKind,
+    pub checksum: Vec<u8>,
 }
 
 #[derive(FromRow, Clone)]
-pub struct FileRow {
-    pub container_id: FileContainerId,
-    pub variant: FileVariant,
+pub struct SidecarRow {
+    pub file_id: FileId,
+    pub sidecar_type: SidecarType,
     pub created_at: DateTime<Utc>,
     pub path: StoragePath,
-    pub size_bytes: u64,
+    pub size_bytes: i64,
     pub mimetype: MimeType,
     pub duration_ms: Option<i64>,
 }
@@ -37,41 +42,24 @@ pub struct FileRow {
 pub struct FileRowMapper;
 
 impl FileRowMapper {
-    pub fn to_container_domain(container: FileContainerRow) -> Result<FileContainer, DomainError> {
-        let entry = FileContainerStoreEntry {
-            id: container.id,
-            original_checksum: Sha256Checksum::new(
-                container
-                    .original_checksum
-                    .try_into()
-                    .map_err(|_| DomainError::PersistenceError)?,
-            ),
-            original_filename: container.original_filename,
-            original_mimekind: container.original_mimekind,
-        };
-        Ok(FileContainer::from_stored(entry))
-    }
-
-    pub fn to_container_domain_many(
-        containers: Vec<FileContainerRow>,
-    ) -> Result<Vec<FileContainer>, DomainError> {
-        containers
-            .into_iter()
-            .map(FileRowMapper::to_container_domain)
-            .collect()
-    }
-
     pub fn to_file_domain(file: FileRow) -> Result<File, DomainError> {
-        let entry = FileStoreEntry {
-            container: file.container_id,
-            variant: file.variant,
+        let entry = FileDbEntry {
+            id: file.id,
             created_at: file.created_at,
-            path: file.path,
-            size_bytes: file.size_bytes,
-            mimetype: file.mimetype,
-            duration: file.duration_ms.map(|ms| Duration::from_millis(ms as u64)),
+            data: FileData {
+                path: file.path,
+                size_bytes: file.size_bytes as u64,
+                mimetype: file.mimetype,
+                duration: file.duration_ms.map(|t| Duration::from_millis(t as u64)),
+                original_filename: file.original_filename,
+                checksum: Sha256Checksum::new(
+                    file.checksum
+                        .try_into()
+                        .map_err(|_| DomainError::PersistenceError)?,
+                ),
+            },
         };
-        Ok(File::from_stored(entry))
+        Ok(File::from_db(entry))
     }
 
     pub fn to_file_domain_many(files: Vec<FileRow>) -> Result<Vec<File>, DomainError> {
@@ -81,29 +69,47 @@ impl FileRowMapper {
             .collect()
     }
 
-    pub fn to_resource(container: FileContainer, files: Vec<File>) -> FileResource {
-        FileResource { container, files }
+    pub fn to_sidecar_domain(sidecar: SidecarRow) -> Result<Sidecar, DomainError> {
+        let entry = SidecarDbEntry {
+            file_id: sidecar.file_id,
+            sidecar_type: sidecar.sidecar_type,
+            created_at: sidecar.created_at,
+            data: SidecarData {
+                path: sidecar.path,
+                size_bytes: sidecar.size_bytes as u64,
+                mimetype: sidecar.mimetype,
+                duration: sidecar.duration_ms.map(|t| Duration::from_millis(t as u64)),
+            },
+        };
+        Ok(Sidecar::from_db(entry))
     }
 
-    pub fn to_resource_many(containers: Vec<FileContainer>, files: Vec<File>) -> Vec<FileResource> {
-        let mut index: HashMap<FileContainerId, Vec<File>> =
-            HashMap::with_capacity(containers.len());
-        for f in files {
-            match index.get_mut(f.key().container()) {
-                Some(v) => v.push(f),
+    pub fn to_sidecar_domain_many(sidecars: Vec<SidecarRow>) -> Result<Vec<Sidecar>, DomainError> {
+        sidecars
+            .into_iter()
+            .map(FileRowMapper::to_sidecar_domain)
+            .collect()
+    }
+
+    pub fn to_resource(file: File, sidecars: Vec<Sidecar>) -> FileResource {
+        FileResource { file, sidecars }
+    }
+
+    pub fn to_resource_many(files: Vec<File>, sidecars: Vec<Sidecar>) -> Vec<FileResource> {
+        let mut idx: HashMap<FileId, Vec<Sidecar>> = HashMap::with_capacity(files.len());
+        for s in sidecars {
+            match idx.get_mut(s.id()) {
+                Some(v) => v.push(s),
                 None => {
-                    index.insert(f.key().container().clone(), vec![f]);
+                    idx.insert(s.id().clone(), vec![s]);
                 }
             }
         }
 
-        let mut resources = Vec::with_capacity(containers.len());
-        for c in containers {
-            let f = index.get(c.id()).cloned().unwrap_or(Vec::new());
-            resources.push(FileResource {
-                container: c,
-                files: f,
-            });
+        let mut resources = Vec::with_capacity(files.len());
+        for f in files {
+            let sidecars = idx.get(f.id()).cloned().unwrap_or(Vec::new());
+            resources.push(FileResource { file: f, sidecars });
         }
 
         resources

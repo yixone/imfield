@@ -28,7 +28,7 @@ impl SidecarType {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Sidecar {
     /// ID of the sidecar source file
     pub(crate) file_id: FileId,

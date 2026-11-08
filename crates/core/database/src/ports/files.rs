@@ -1,7 +1,7 @@
 use imfield_models::{
     DomainError,
-    entities::{File, FileContainer, file::FileResource},
-    types::id::{FileContainerId, FileKey},
+    entities::{File, Sidecar, file::FileResource, sidecar::SidecarType},
+    types::id::FileId,
 };
 
 use crate::{
@@ -13,66 +13,86 @@ use crate::{
 pub trait FilesDatabase: Send + Sync {
     async fn insert_file(&self, file: &File) -> Result<(), DatabaseError>;
 
-    async fn get_container_by_id(
-        &self,
-        id: &FileContainerId,
-    ) -> Result<FileResource, DatabaseError>;
+    async fn get(&self, id: &FileId) -> Result<File, DatabaseError>;
 
-    async fn get_file(&self, key: &FileKey) -> Result<Option<File>, DatabaseError>;
+    async fn get_sidecar(&self, id: &FileId, ty: SidecarType) -> Result<Sidecar, DatabaseError>;
+
+    async fn get_resource(&self, id: &FileId) -> Result<FileResource, DatabaseError>;
 
     async fn update_file_fn_boxed(
         &self,
-        key: &FileKey,
+        id: &FileId,
         f: Box<UpdateFn<File>>,
     ) -> Result<File, DatabaseError>;
 
+    async fn update_sidecar_fn_boxed(
+        &self,
+        id: &FileId,
+        ty: SidecarType,
+        f: Box<UpdateFn<Sidecar>>,
+    ) -> Result<Sidecar, DatabaseError>;
+
     async fn delete_file_fn_boxed(
         &self,
-        key: &FileKey,
+        id: &FileId,
         f: Box<DeleteFn<File>>,
     ) -> Result<(), DatabaseError>;
 
-    async fn delete_file(&self, key: &FileKey) -> Result<(), DatabaseError> {
-        self.delete_file_fn_boxed(key, Box::new(|_| Ok(()))).await
-    }
-
-    async fn delete_container_fn_boxed(
+    async fn delete_sidecar_fn_boxed(
         &self,
-        id: &FileContainerId,
-        f: Box<DeleteFn<FileContainer>>,
+        id: &FileId,
+        ty: SidecarType,
+        f: Box<DeleteFn<Sidecar>>,
     ) -> Result<(), DatabaseError>;
 
-    async fn delete_container(&self, id: &FileContainerId) -> Result<(), DatabaseError> {
-        self.delete_container_fn_boxed(id, Box::new(|_| Ok(())))
+    async fn delete_file(&self, id: &FileId) -> Result<(), DatabaseError> {
+        self.delete_file_fn_boxed(id, Box::new(|_| Ok(()))).await
+    }
+
+    async fn delete_sidecar(&self, id: &FileId, ty: SidecarType) -> Result<(), DatabaseError> {
+        self.delete_sidecar_fn_boxed(id, ty, Box::new(|_| Ok(())))
             .await
     }
 }
 
 #[async_trait::async_trait]
 pub trait FilesDatabaseExt: FilesDatabase {
-    async fn update_file_fn<Fn>(&self, key: &FileKey, f: Fn) -> Result<File, DatabaseError>
+    async fn update_file_fn<Fn>(&self, id: &FileId, f: Fn) -> Result<File, DatabaseError>
     where
         Fn: FnOnce(&mut File) -> Result<(), DomainError> + Send + 'static,
     {
-        self.update_file_fn_boxed(key, Box::new(f)).await
+        self.update_file_fn_boxed(id, Box::new(f)).await
     }
 
-    async fn delete_file_fn<Fn>(&self, key: &FileKey, f: Fn) -> Result<(), DatabaseError>
+    async fn update_sidecar_fn<Fn>(
+        &self,
+        id: &FileId,
+        ty: SidecarType,
+        f: Fn,
+    ) -> Result<Sidecar, DatabaseError>
+    where
+        Fn: FnOnce(&mut Sidecar) -> Result<(), DomainError> + Send + 'static,
+    {
+        self.update_sidecar_fn_boxed(id, ty, Box::new(f)).await
+    }
+
+    async fn delete_file_fn<Fn>(&self, id: &FileId, f: Fn) -> Result<(), DatabaseError>
     where
         Fn: FnOnce(&File) -> Result<(), DomainError> + Send + 'static,
     {
-        self.delete_file_fn_boxed(key, Box::new(f)).await
+        self.delete_file_fn_boxed(id, Box::new(f)).await
     }
 
-    async fn delete_container_fn<Fn>(
+    async fn delete_sidecar_fn<Fn>(
         &self,
-        id: &FileContainerId,
+        id: &FileId,
+        ty: SidecarType,
         f: Fn,
     ) -> Result<(), DatabaseError>
     where
-        Fn: FnOnce(&FileContainer) -> Result<(), DomainError> + Send + 'static,
+        Fn: FnOnce(&Sidecar) -> Result<(), DomainError> + Send + 'static,
     {
-        self.delete_container_fn_boxed(id, Box::new(f)).await
+        self.delete_sidecar_fn_boxed(id, ty, Box::new(f)).await
     }
 }
 

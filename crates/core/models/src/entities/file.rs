@@ -10,7 +10,7 @@ use crate::{
 };
 
 /// Virtual file resource, including all embedded data
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct FileResource {
     pub file: File,
     pub sidecars: Vec<Sidecar>,
