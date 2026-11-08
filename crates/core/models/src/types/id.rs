@@ -1,5 +1,3 @@
-use crate::types::files::FileVariant;
-
 /// Defines a newtype for the identifier
 ///
 /// Automatically implements [`std::fmt::Display`] and [`From<INNER_TYPE>`]
@@ -40,18 +38,4 @@ id_type_copy!(
     AssetId as imfield_snowflake::SnowflakeId
 );
 
-id_type!(FileContainerId as imfield_snowflake::SnowflakeIdStr);
-
-/// Identifies a [`File`] by its owning [`FileGroup`] and variant
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct FileKey(pub(crate) FileContainerId, pub(crate) FileVariant);
-
-impl FileKey {
-    pub fn container(&self) -> &FileContainerId {
-        &self.0
-    }
-
-    pub fn variant(&self) -> FileVariant {
-        self.1
-    }
-}
+id_type!(FileId as imfield_snowflake::SnowflakeIdStr);

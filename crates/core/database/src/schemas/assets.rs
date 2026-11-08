@@ -5,13 +5,12 @@ use imfield_models::{
     DomainError,
     entities::{
         Asset,
-        asset::{AssetData, AssetResource, AssetState, AssetStateFailure},
-        file::FileContainerResource,
+        asset::{AssetData, AssetDbEntry, AssetResource, AssetState, AssetStateFailure},
+        file::FileResource,
     },
     types::{
-        id::{AssetId, FileContainerId},
+        id::{AssetId, FileId},
         media::{Color, PerceptualHash, ThumbHash},
-        store::AssetStoreEntry,
     },
 };
 use sqlx::prelude::FromRow;
@@ -19,7 +18,7 @@ use sqlx::prelude::FromRow;
 #[derive(FromRow, Clone)]
 pub struct AssetRow {
     pub id: AssetId,
-    pub file_container_id: FileContainerId,
+    pub file_id: FileId,
     pub accent_color: Option<Color>,
     pub width: Option<i32>,
     pub height: Option<i32>,
@@ -54,9 +53,9 @@ impl AssetRowMapper {
         asset: AssetRow,
         features: AssetSimilarityFeaturesRow,
     ) -> Result<Asset, DomainError> {
-        let entry = AssetStoreEntry {
+        let entry = AssetDbEntry {
             id: asset.id,
-            file_container: asset.file_container_id,
+            file: asset.file_id,
             data: AssetData {
                 title: asset.title,
                 caption: asset.caption,
@@ -80,7 +79,7 @@ impl AssetRowMapper {
             p_hash: features.p_hash,
             a_hash: features.a_hash,
         };
-        Ok(Asset::from_stored(entry))
+        Ok(Asset::from_db(entry))
     }
 
     /// Converts multiple asset database rows into domain entities
@@ -109,27 +108,27 @@ impl AssetRowMapper {
     }
 
     /// Creates an asset resource from a domain entity and its file container
-    pub fn to_resource(asset: Asset, files: FileContainerResource) -> AssetResource {
+    pub fn to_resource(asset: Asset, files: FileResource) -> AssetResource {
         AssetResource { asset, files }
     }
 
     /// Creates multiple asset resources by matching file containers to assets
     pub fn to_resource_many(
         assets: Vec<Asset>,
-        files: Vec<FileContainerResource>,
+        files: Vec<FileResource>,
     ) -> Result<Vec<AssetResource>, DomainError> {
         let mut index = HashMap::with_capacity(files.len());
         for f in files {
-            if index.contains_key(f.container.id()) {
+            if index.contains_key(f.file.id()) {
                 continue;
             }
-            index.insert(f.container.id().clone(), f);
+            index.insert(f.file.id().clone(), f);
         }
 
         let mut resources = Vec::with_capacity(assets.len());
         for a in assets {
             let f = index
-                .get(a.file_group_id())
+                .get(a.file_id())
                 .ok_or(DomainError::PersistenceError)?;
 
             resources.push(AssetResource {
@@ -143,11 +142,11 @@ impl AssetRowMapper {
 
     /// Converts a domain entity into it corresponding database rows
     pub fn from_domain(asset: Asset) -> (AssetRow, AssetSimilarityFeaturesRow) {
-        let entry = asset.to_stored();
+        let entry = asset.to_db();
         (
             AssetRow {
                 id: entry.id,
-                file_container_id: entry.file_container,
+                file_id: entry.file,
                 accent_color: entry.accent_color,
                 width: entry.dimension.map(|(w, _)| w as i32),
                 height: entry.dimension.map(|(_, h)| h as i32),

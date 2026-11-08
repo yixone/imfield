@@ -1,98 +1,53 @@
-use std::time::Duration;
+use std::{collections::HashSet, time::Duration};
 
 use chrono::{DateTime, Utc};
 use imfield_mimetype::{MimeKind, MimeType};
 use imfield_storage_address::StoragePath;
 
-use crate::types::{
-    files::{FileVariant, Sha256Checksum},
-    id::{FileContainerId, FileKey},
-    store::{FileContainerStoreEntry, FileStoreEntry},
+use crate::{
+    entities::{Sidecar, sidecar::SidecarType},
+    types::{files::Sha256Checksum, id::FileId},
 };
 
-/// Virtual file container resource, including all embedded data
+/// Virtual file resource, including all embedded data
 #[derive(Debug, Clone)]
-pub struct FileContainerResource {
-    /// File container model
-    pub container: FileContainer,
-    /// Container's files
-    pub files: Vec<File>,
+pub struct FileResource {
+    pub file: File,
+    pub sidecars: Vec<Sidecar>,
 }
 
-#[derive(Debug, Clone)]
-pub struct FileContainer {
-    /// File container id
-    pub(crate) id: FileContainerId,
-
-    /// SHA-256 checksum of the original file, used for
-    /// content verification
-    pub(crate) original_checksum: Sha256Checksum,
-    /// Original filename, if available
-    pub(crate) original_filename: Option<String>,
-    /// MIME kind of the original file
-    pub(crate) original_mimekind: MimeKind,
+impl FileResource {
+    pub fn sidecar_variants(&self) -> HashSet<SidecarType> {
+        self.sidecars.iter().map(|s| s.sidecar_type()).collect()
+    }
 }
 
-pub struct OriginalFileData {
-    checksum: Sha256Checksum,
-    filename: Option<String>,
-    mimekind: MimeKind,
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde::Serialize, serde::Deserialize),
+    serde(rename_all = "snake_case")
+)]
+pub enum FileVariant {
+    Original,
+    #[cfg_attr(feature = "serde", serde(untagged))]
+    Sidecar(SidecarType),
 }
 
-impl FileContainer {
-    /// Creates a new [`FileContainer`]
-    pub fn new(id: FileContainerId, original: OriginalFileData) -> FileContainer {
-        FileContainer {
-            id,
-            original_checksum: original.checksum,
-            original_filename: original.filename,
-            original_mimekind: original.mimekind,
+impl FileVariant {
+    /// Returns the [`FileVariant`] as a string
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Original => "original",
+            Self::Sidecar(s) => s.as_str(),
         }
-    }
-
-    pub fn from_stored(entry: FileContainerStoreEntry) -> Self {
-        FileContainer {
-            id: entry.id,
-            original_checksum: entry.original_checksum,
-            original_filename: entry.original_filename,
-            original_mimekind: entry.original_mimekind,
-        }
-    }
-
-    pub fn to_stored(self) -> FileContainerStoreEntry {
-        FileContainerStoreEntry {
-            id: self.id,
-            original_checksum: self.original_checksum,
-            original_filename: self.original_filename,
-            original_mimekind: self.original_mimekind,
-        }
-    }
-
-    /// Returns the file container's identifier
-    pub fn id(&self) -> &FileContainerId {
-        &self.id
-    }
-
-    /// Returns the SHA-256 checksum of the original file
-    pub fn original_checksum(&self) -> Sha256Checksum {
-        self.original_checksum
-    }
-
-    /// Returns the orignal filename, if available
-    pub fn original_filename(&self) -> Option<&str> {
-        self.original_filename.as_deref()
-    }
-
-    /// Returns the MIME kind of the original file
-    pub fn original_mimekind(&self) -> MimeKind {
-        self.original_mimekind
     }
 }
 
 #[derive(Debug, Clone)]
 pub struct File {
-    /// File key (FileContainerId + Variant)
-    pub(crate) key: FileKey,
+    /// Snowflake File id
+    pub(crate) id: FileId,
 
     /// File creation time
     pub(crate) created_at: DateTime<Utc>,
@@ -105,57 +60,81 @@ pub struct File {
 
     /// File MIME type
     pub(crate) mimetype: MimeType,
+    /// MIME kind of the original file
+    pub(crate) mimekind: MimeKind,
 
     /// File duration (for supported files)
     pub(crate) duration: Option<Duration>,
+
+    /// Original filename, if available
+    pub(crate) original_filename: Option<String>,
+
+    /// SHA-256 checksum of the original file, used for
+    /// content verification
+    pub(crate) checksum: Sha256Checksum,
+}
+
+pub struct FileData {
+    pub path: StoragePath,
+    pub size_bytes: u64,
+    pub mimetype: MimeType,
+    pub duration: Option<Duration>,
+    pub original_filename: Option<String>,
+    pub checksum: Sha256Checksum,
+}
+
+pub struct FileDbEntry {
+    pub id: FileId,
+    pub created_at: DateTime<Utc>,
+    pub data: FileData,
 }
 
 impl File {
-    pub fn new(
-        container: &FileContainerId,
-        variant: FileVariant,
-        path: StoragePath,
-        size_bytes: u64,
-        mimetype: MimeType,
-        duration: Option<Duration>,
-    ) -> Self {
+    pub fn new(id: FileId, data: FileData) -> Self {
         File {
-            key: FileKey(container.clone(), variant),
+            id,
             created_at: Utc::now(),
-            path,
-            size_bytes,
-            mimetype,
-            duration,
+            path: data.path,
+            size_bytes: data.size_bytes,
+            mimetype: data.mimetype,
+            mimekind: data.mimetype.kind(),
+            duration: data.duration,
+            original_filename: data.original_filename,
+            checksum: data.checksum,
         }
     }
 
-    pub fn from_stored(entry: FileStoreEntry) -> Self {
-        let key = FileKey(entry.container, entry.variant);
-
+    pub fn from_db(entry: FileDbEntry) -> Self {
         File {
-            key,
+            id: entry.id,
             created_at: entry.created_at,
-            path: entry.path,
-            size_bytes: entry.size_bytes,
-            mimetype: entry.mimetype,
-            duration: entry.duration,
+            path: entry.data.path,
+            size_bytes: entry.data.size_bytes,
+            mimetype: entry.data.mimetype,
+            mimekind: entry.data.mimetype.kind(),
+            duration: entry.data.duration,
+            original_filename: entry.data.original_filename,
+            checksum: entry.data.checksum,
         }
     }
 
-    pub fn to_stored(self) -> FileStoreEntry {
-        FileStoreEntry {
-            container: self.key.0,
-            variant: self.key.1,
+    pub fn to_db(self) -> FileDbEntry {
+        FileDbEntry {
+            id: self.id,
             created_at: self.created_at,
-            path: self.path,
-            size_bytes: self.size_bytes,
-            mimetype: self.mimetype,
-            duration: self.duration,
+            data: FileData {
+                path: self.path,
+                size_bytes: self.size_bytes,
+                mimetype: self.mimetype,
+                duration: self.duration,
+                original_filename: self.original_filename,
+                checksum: self.checksum,
+            },
         }
     }
 
-    pub fn key(&self) -> &FileKey {
-        &self.key
+    pub fn id(&self) -> &FileId {
+        &self.id
     }
 
     pub fn created_at(&self) -> DateTime<Utc> {
@@ -174,11 +153,23 @@ impl File {
         self.mimetype
     }
 
+    pub fn mimekind(&self) -> MimeKind {
+        self.mimekind
+    }
+
     pub fn duration(&self) -> Option<Duration> {
         self.duration
     }
 
     pub fn set_duration(&mut self, duration: Option<Duration>) {
         self.duration = duration;
+    }
+
+    pub fn original_filename(&self) -> Option<&str> {
+        self.original_filename.as_deref()
+    }
+
+    pub fn checksum(&self) -> Sha256Checksum {
+        self.checksum
     }
 }

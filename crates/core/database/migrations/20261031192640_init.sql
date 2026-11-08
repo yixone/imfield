@@ -1,42 +1,45 @@
-CREATE TABLE file_containers (
-    id                  VARCHAR(32)     NOT NULL,
-    
-    original_checksum   BLOB            NOT NULL,
-    original_filename   VARCHAR(512),
-    original_mimekind   VARCHAR(32)     NOT NULL,
-
-    PRIMARY KEY (id)
-);
-
-CREATE INDEX idx_file_containers_checksum ON file_containers(original_checksum);
-CREATE INDEX idx_file_containers_mimekind ON file_containers(original_mimekind);
-
 CREATE TABLE files (
-    container_id        VARCHAR(32)     NOT NULL,
-    variant             VARCHAR(32)     NOT NULL,
+    id                  VARCHAR(32)     NOT NULL,
 
     created_at          TIMESTAMPTZ     NOT NULL,
 
     path                VARCHAR(512)    NOT NULL,
-
     size_bytes          BIGINT          NOT NULL,
+
     mimetype            VARCHAR(128)    NOT NULL,
+    mimekind            VARCHAR(32)     NOT NULL,
 
     duration_ms         BIGINT,
 
-    PRIMARY KEY (container_id, variant),
+    original_filename   VARCHAR(512),
+    checksum            BLOB            NOT NULL,
 
-    FOREIGN KEY (container_id) REFERENCES file_containers(id) ON DELETE CASCADE,
-
-    CONSTRAINT  valid_duration  CHECK (duration_ms IS NULL OR duration_ms >= 0),
-    CONSTRAINT  valid_size      CHECK (size_bytes >= 0)
+    PRIMARY KEY (id)
 );
 
-CREATE INDEX idx_file_container ON files(container_id);
+CREATE INDEX idx_files_checksum ON files(checksum);
+CREATE INDEX idx_files_mimekind ON files(mimekind);
+
+CREATE TABLE sidecars (
+    file_id             VARCHAR(32)     NOT NULL,
+    sidecar_type        VARCHAR(64)     NOT NULL,
+
+    created_at          TIMESTAMPTZ     NOT NULL,
+
+    path                VARCHAR(512)    NOT NULL,
+    size_bytes          BIGINT          NOT NULL,
+
+    mimetype            VARCHAR(128)    NOT NULL,
+    duration_ms         BIGINT,
+
+    PRIMARY KEY (file_id, sidecar_type),
+
+    FOREIGN KEY (file_id) REFERENCES files(id) ON DELETE CASCADE
+);
 
 CREATE TABLE assets (
     id                  BIGINT          NOT NULL,
-    file_container_id   VARCHAR(32)     NOT NULL,
+    file_id             VARCHAR(32)     NOT NULL,
 
     accent_color        INTEGER,
     width               INTEGER,
@@ -62,7 +65,7 @@ CREATE TABLE assets (
 
     PRIMARY KEY (id),
 
-    FOREIGN KEY (file_container_id) REFERENCES file_containers(id),
+    FOREIGN KEY (file_id)       REFERENCES files(id),
 
     CONSTRAINT  valid_parent    CHECK (id <> parent_id),
     FOREIGN KEY (parent_id)     REFERENCES assets(id)  ON DELETE SET NULL,
@@ -85,7 +88,7 @@ CREATE INDEX idx_assets_state           ON assets(state);
 CREATE INDEX idx_assets_parent          ON assets(parent_id);
 CREATE INDEX idx_assets_duplicate       ON assets(duplicate_of);
 
-CREATE INDEX idx_assets_file_container  ON assets(file_container_id);
+CREATE INDEX idx_assets_file            ON assets(file_id);
 
 CREATE TABLE assets_features (
     id                  BIGINT          NOT NULL,
