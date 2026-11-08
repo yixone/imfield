@@ -6,13 +6,14 @@ use imfield_models::{
     },
     types::{files::Sha256Checksum, id::AssetId},
 };
-use sqlx::SqlitePool;
+use sqlx::{QueryBuilder, SqlitePool};
 
 use crate::{
     DatabaseError,
     error::ToDatabaseError,
     impls::queries,
     ports::assets::AssetsDatabase,
+    schemas::assets::AssetRow,
     types::{
         commands::{DeleteFn, UpdateFn},
         query::{CursorPagination, DeletedVisibility, SortOrder},
@@ -111,6 +112,35 @@ impl AssetsDatabase for SqliteAssetsDatabase {
     }
 
     async fn get_by_ids(&self, ids: &[AssetId]) -> Result<Vec<AssetResource>, DatabaseError> {
+        if ids.is_empty() {
+            return Ok(vec![]);
+        }
+
+        // Uses a transaction to obtain a consistent collectable domain
+        let mut tx = self.pool.begin().await.to_db_error()?;
+
+        let assets: Vec<AssetRow> = {
+            let mut qb = QueryBuilder::new(
+                "
+                SELECT * FROM assets
+                WHERE id IN (
+                ",
+            );
+
+            let mut sep = qb.separated(", ");
+            for id in ids {
+                sep.push_bind(id);
+            }
+            sep.push_unseparated(")");
+
+            qb.build_query_as()
+                .fetch_all(&mut *tx)
+                .await
+                .to_db_error()?
+        };
+
+        tx.commit().await.to_db_error()?;
+
         todo!()
     }
 

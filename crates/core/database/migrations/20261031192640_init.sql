@@ -32,6 +32,8 @@ CREATE TABLE files (
     CONSTRAINT  valid_size      CHECK (size_bytes >= 0)
 );
 
+CREATE INDEX idx_file_container ON files(container_id);
+
 CREATE TABLE assets (
     id                  BIGINT          NOT NULL,
     file_container_id   VARCHAR(32)     NOT NULL,

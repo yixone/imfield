@@ -6,13 +6,12 @@
 pub mod ports;
 pub mod types;
 
+pub mod error;
+
+pub mod driver;
 pub mod impls;
 
 mod schemas;
-mod utils;
-
-pub mod driver;
-pub mod error;
 
 pub use driver::SqliteDatabase;
 pub use error::DatabaseError;
