@@ -10,9 +10,8 @@ use sqlx::{QueryBuilder, SqlitePool};
 use crate::{
     DatabaseError,
     error::ToDatabaseError,
-    impls::queries,
+    impls::{queries, utils::hydrator::AssetHydrator},
     ports::assets::AssetsDatabase,
-    schemas::assets::AssetRow,
     types::{
         commands::{DeleteFn, UpdateFn},
         query::{CursorPagination, DeletedVisibility, SortOrder},
@@ -35,10 +34,7 @@ impl AssetsDatabase for SqliteAssetsDatabase {
     async fn insert(&self, data: (&Asset, &File)) -> Result<(), DatabaseError> {
         let mut tx = self.pool.begin().await.to_db_error()?;
 
-        queries::files::insert_file_container(&data.1.container, &mut tx).await?;
-        for f in &data.1.files {
-            queries::files::insert_file(f, &mut tx).await?;
-        }
+        queries::files::insert_file(data.1, &mut tx).await?;
 
         let asset = data.0;
         sqlx::query(
@@ -115,10 +111,9 @@ impl AssetsDatabase for SqliteAssetsDatabase {
             return Ok(vec![]);
         }
 
-        // Uses a transaction to obtain a consistent collectable domain
         let mut tx = self.pool.begin().await.to_db_error()?;
 
-        let assets: Vec<AssetRow> = {
+        let assets = {
             let mut qb = QueryBuilder::new(
                 "
                 SELECT * FROM assets
@@ -137,10 +132,11 @@ impl AssetsDatabase for SqliteAssetsDatabase {
                 .await
                 .to_db_error()?
         };
+        let res = AssetHydrator::hydrate_asset_resource_many(assets, &mut tx).await?;
 
         tx.commit().await.to_db_error()?;
 
-        todo!()
+        Ok(res)
     }
 
     async fn get_by_state(

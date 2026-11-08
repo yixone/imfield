@@ -14,10 +14,7 @@ CREATE TABLE files (
     original_filename   VARCHAR(512),
     checksum            BLOB            NOT NULL,
 
-    PRIMARY KEY (id),
-
-    CONSTRAINT  valid_duration  CHECK (duration_ms IS NULL OR duration_ms >= 0),
-    CONSTRAINT  valid_size      CHECK (size_bytes >= 0)
+    PRIMARY KEY (id)
 );
 
 CREATE INDEX idx_files_checksum ON files(checksum);
@@ -37,10 +34,7 @@ CREATE TABLE sidecars (
 
     PRIMARY KEY (file_id, sidecar_type),
 
-    FOREIGN KEY (file_id) REFERENCES files(id) ON DELETE CASCADE,
-
-    CONSTRAINT  valid_sidecar_duration  CHECK (duration_ms IS NULL OR duration_ms >= 0),
-    CONSTRAINT  valid_sidecar_size      CHECK (size_bytes >= 0)
+    FOREIGN KEY (file_id) REFERENCES files(id) ON DELETE CASCADE
 );
 
 CREATE TABLE assets (
@@ -94,7 +88,7 @@ CREATE INDEX idx_assets_state           ON assets(state);
 CREATE INDEX idx_assets_parent          ON assets(parent_id);
 CREATE INDEX idx_assets_duplicate       ON assets(duplicate_of);
 
-CREATE INDEX idx_assets_file_container  ON assets(file_container_id);
+CREATE INDEX idx_assets_file            ON assets(file_id);
 
 CREATE TABLE assets_features (
     id                  BIGINT          NOT NULL,

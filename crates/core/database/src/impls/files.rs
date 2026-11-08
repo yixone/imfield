@@ -1,6 +1,6 @@
 use imfield_models::{
-    entities::{File, FileContainer, file::FileResource},
-    types::id::{FileContainerId, FileKey},
+    entities::{File, Sidecar, file::FileResource, sidecar::SidecarType},
+    types::id::FileId,
 };
 use sqlx::SqlitePool;
 
@@ -27,37 +27,48 @@ impl FilesDatabase for SqliteFilesDatabase {
         todo!()
     }
 
-    async fn get_container_by_id(
-        &self,
-        id: &FileContainerId,
-    ) -> Result<FileResource, DatabaseError> {
+    async fn get(&self, id: &FileId) -> Result<File, DatabaseError> {
         todo!()
     }
 
-    async fn get_file(&self, key: &FileKey) -> Result<Option<File>, DatabaseError> {
+    async fn get_sidecar(&self, id: &FileId, ty: SidecarType) -> Result<Sidecar, DatabaseError> {
+        todo!()
+    }
+
+    async fn get_resource(&self, id: &FileId) -> Result<FileResource, DatabaseError> {
         todo!()
     }
 
     async fn update_file_fn_boxed(
         &self,
-        key: &FileKey,
+        id: &FileId,
         f: Box<UpdateFn<File>>,
     ) -> Result<File, DatabaseError> {
         todo!()
     }
 
+    async fn update_sidecar_fn_boxed(
+        &self,
+        id: &FileId,
+        ty: SidecarType,
+        f: Box<UpdateFn<Sidecar>>,
+    ) -> Result<Sidecar, DatabaseError> {
+        todo!()
+    }
+
     async fn delete_file_fn_boxed(
         &self,
-        key: &FileKey,
+        id: &FileId,
         f: Box<DeleteFn<File>>,
     ) -> Result<(), DatabaseError> {
         todo!()
     }
 
-    async fn delete_container_fn_boxed(
+    async fn delete_sidecar_fn_boxed(
         &self,
-        id: &FileContainerId,
-        f: Box<DeleteFn<FileContainer>>,
+        id: &FileId,
+        ty: SidecarType,
+        f: Box<DeleteFn<Sidecar>>,
     ) -> Result<(), DatabaseError> {
         todo!()
     }

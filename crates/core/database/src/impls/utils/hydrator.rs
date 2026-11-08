@@ -9,7 +9,7 @@ use crate::{
     impls::queries,
     schemas::{
         assets::{AssetRow, AssetRowMapper},
-        files::{FileContainerRow, FileRowMapper},
+        files::{FileRow, FileRowMapper},
     },
 };
 
@@ -45,12 +45,12 @@ impl AssetHydrator {
     ) -> Result<AssetResource, DatabaseError> {
         let asset = AssetHydrator::hydrate_asset(row, conn).await?;
 
-        let file_cont = queries::files::load_container(asset.file_id(), conn)
+        let file = queries::files::load_file(asset.file_id(), conn)
             .await?
             .ok_or(DomainError::PersistenceError)?;
-        let files = FileHydrator::hydrate_container_resource(file_cont, conn).await?;
+        let file_res = FileHydrator::hydrate_file_resource(file, conn).await?;
 
-        let res = AssetRowMapper::to_resource(asset, files);
+        let res = AssetRowMapper::to_resource(asset, file_res);
         Ok(res)
     }
 
@@ -64,10 +64,11 @@ impl AssetHydrator {
             .iter()
             .map(|a| a.file_id().clone())
             .collect::<Vec<_>>();
-        let file_cont = queries::files::load_container_many(&ids, conn).await?;
-        let files = FileHydrator::hydrate_container_resource_many(file_cont, conn).await?;
+        let files = queries::files::load_files_many(&ids, conn).await?;
 
-        let res = AssetRowMapper::to_resource_many(assets, files)?;
+        let files_res = FileHydrator::hydrate_file_resource_many(files, conn).await?;
+
+        let res = AssetRowMapper::to_resource_many(assets, files_res)?;
         Ok(res)
     }
 }
@@ -75,30 +76,30 @@ impl AssetHydrator {
 pub struct FileHydrator;
 
 impl FileHydrator {
-    pub async fn hydrate_container_resource(
-        row: FileContainerRow,
+    pub async fn hydrate_file_resource_many(
+        rows: Vec<FileRow>,
         conn: &mut SqliteConnection,
-    ) -> Result<FileResource, DatabaseError> {
-        let files = queries::files::load_container_files(&row.id, conn).await?;
+    ) -> Result<Vec<FileResource>, DatabaseError> {
+        let ids = rows.iter().map(|f| f.id.clone()).collect::<Vec<_>>();
+        let sidecars_rows = queries::files::load_files_sidecars_many(&ids, conn).await?;
 
-        let container = FileRowMapper::to_container_domain(row)?;
-        let files = FileRowMapper::to_file_domain_many(files)?;
+        let files = FileRowMapper::to_file_domain_many(rows)?;
+        let sidecars = FileRowMapper::to_sidecar_domain_many(sidecars_rows)?;
 
-        let res = FileRowMapper::to_resource(container, files);
+        let res = FileRowMapper::to_resource_many(files, sidecars);
         Ok(res)
     }
 
-    pub async fn hydrate_container_resource_many(
-        rows: Vec<FileContainerRow>,
+    pub async fn hydrate_file_resource(
+        row: FileRow,
         conn: &mut SqliteConnection,
-    ) -> Result<Vec<FileResource>, DatabaseError> {
-        let ids = rows.iter().map(|g| g.id.clone()).collect::<Vec<_>>();
-        let files = queries::files::load_container_files_many(&ids, conn).await?;
+    ) -> Result<FileResource, DatabaseError> {
+        let sidecars_rows = queries::files::load_file_sidecars(&row.id, conn).await?;
 
-        let containers = FileRowMapper::to_container_domain_many(rows)?;
-        let files = FileRowMapper::to_file_domain_many(files)?;
+        let file = FileRowMapper::to_file_domain(row)?;
+        let sidecars = FileRowMapper::to_sidecar_domain_many(sidecars_rows)?;
 
-        let res = FileRowMapper::to_resource_many(containers, files);
+        let res = FileRowMapper::to_resource(file, sidecars);
         Ok(res)
     }
 }
