@@ -32,6 +32,8 @@ impl SidecarType {
 pub struct Sidecar {
     /// ID of the sidecar source file
     pub(crate) file_id: FileId,
+    /// Sidecar type
+    pub(crate) sidecar_type: SidecarType,
 
     /// Sidecar creation time
     pub(crate) created_at: DateTime<Utc>,
@@ -44,9 +46,6 @@ pub struct Sidecar {
 
     /// Sidecar MIME type
     pub(crate) mimetype: MimeType,
-
-    /// Sidecar type
-    pub(crate) sidecar_type: SidecarType,
 
     /// Sidecar file duration (for supported files)
     pub(crate) duration: Option<Duration>,
@@ -111,8 +110,8 @@ impl Sidecar {
         self.mimetype
     }
 
-    pub fn sidecar_type(&self) -> &SidecarType {
-        &self.sidecar_type
+    pub fn sidecar_type(&self) -> SidecarType {
+        self.sidecar_type
     }
 
     pub fn duration(&self) -> Option<Duration> {

@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::{collections::HashSet, time::Duration};
 
 use chrono::{DateTime, Utc};
 use imfield_mimetype::{MimeKind, MimeType};
@@ -14,6 +14,12 @@ use crate::{
 pub struct FileResource {
     pub file: File,
     pub sidecars: Vec<Sidecar>,
+}
+
+impl FileResource {
+    pub fn sidecar_variants(&self) -> HashSet<SidecarType> {
+        self.sidecars.iter().map(|s| s.sidecar_type()).collect()
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
