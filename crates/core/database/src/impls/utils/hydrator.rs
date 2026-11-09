@@ -39,21 +39,6 @@ impl AssetHydrator {
         Ok(domain)
     }
 
-    pub async fn hydrate_asset_resource(
-        row: AssetRow,
-        conn: &mut SqliteConnection,
-    ) -> Result<AssetResource, DatabaseError> {
-        let asset = AssetHydrator::hydrate_asset(row, conn).await?;
-
-        let file = queries::files::load_file(asset.file_id(), conn)
-            .await?
-            .ok_or(DomainError::PersistenceError)?;
-        let file_res = FileHydrator::hydrate_file_resource(file, conn).await?;
-
-        let res = AssetRowMapper::to_resource(asset, file_res);
-        Ok(res)
-    }
-
     pub async fn hydrate_asset_resource_many(
         rows: Vec<AssetRow>,
         conn: &mut SqliteConnection,

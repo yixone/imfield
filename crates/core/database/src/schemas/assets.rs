@@ -107,11 +107,6 @@ impl AssetRowMapper {
         Ok(domains)
     }
 
-    /// Creates an asset resource from a domain entity and its file container
-    pub fn to_resource(asset: Asset, files: FileResource) -> AssetResource {
-        AssetResource { asset, files }
-    }
-
     /// Creates multiple asset resources by matching file containers to assets
     pub fn to_resource_many(
         assets: Vec<Asset>,
@@ -138,40 +133,5 @@ impl AssetRowMapper {
         }
 
         Ok(resources)
-    }
-
-    /// Converts a domain entity into it corresponding database rows
-    pub fn from_domain(asset: Asset) -> (AssetRow, AssetSimilarityFeaturesRow) {
-        let entry = asset.to_db();
-        (
-            AssetRow {
-                id: entry.id,
-                file_id: entry.file,
-                accent_color: entry.accent_color,
-                width: entry.dimension.map(|(w, _)| w as i32),
-                height: entry.dimension.map(|(_, h)| h as i32),
-                thumbhash: entry.thumbhash.map(|t| t.into_inner()),
-                title: entry.data.title,
-                caption: entry.data.caption,
-                source_url: entry.data.source_url,
-                state: entry.state.to_string(),
-                state_failure: match entry.state {
-                    AssetState::Failed(f) => Some(f),
-                    _ => None,
-                },
-                is_offline: entry.is_offline,
-                parent_id: entry.data.parent_id,
-                duplicate_of: entry.data.duplicate_of,
-                created_at: entry.created_at,
-                updated_at: entry.updated_at,
-                deleted_at: entry.deleted_at,
-            },
-            AssetSimilarityFeaturesRow {
-                id: entry.id,
-                updated_at: entry.features_updated_at,
-                p_hash: entry.p_hash,
-                a_hash: entry.a_hash,
-            },
-        )
     }
 }
