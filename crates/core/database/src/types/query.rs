@@ -1,0 +1,87 @@
+use crate::DatabaseError;
+
+/// Offset-based pagination for retrieving a page of entities
+pub struct Pagination {
+    page: u64,
+    limit: u64,
+}
+
+impl Pagination {
+    /// Creates a new [`Pagination`]
+    pub fn new(page: u64, limit: u64) -> Self {
+        Self { page, limit }
+    }
+
+    /// Returns the limit of this [`Pagination`]
+    pub fn limit(&self) -> u64 {
+        self.limit
+    }
+
+    /// Returns the page of this [`Pagination`]
+    pub fn page(&self) -> u64 {
+        self.page
+    }
+
+    /// Returns the offset of this [`Pagination`]
+    ///
+    /// Returns [`DatabaseError::PaginationOverflow`] if the calculation overflows
+    #[inline]
+    pub fn try_offset(&self) -> Result<u64, DatabaseError> {
+        self.page()
+            .checked_mul(self.limit())
+            .ok_or(DatabaseError::InvalidPagination)
+    }
+}
+
+/// Keyset pagination using an ordered cursor
+///
+/// The cursor defines the boundary for the next page. The comparison
+/// direction depends on the query's sort order
+pub struct CursorPagination<I: Ord> {
+    cursor: Option<I>,
+    limit: u64,
+}
+
+impl<I: Ord> CursorPagination<I> {
+    /// Creates a new [`CursorPagination`]
+    pub fn new(cursor: Option<I>, limit: u64) -> Self {
+        Self { cursor, limit }
+    }
+
+    /// Returns the limit of this [`CursorPagination`]
+    pub fn limit(&self) -> u64 {
+        self.limit
+    }
+
+    /// Returns a reference to the cursor of this [`CursorPagination`]
+    pub fn cursor(&self) -> Option<&I> {
+        self.cursor.as_ref()
+    }
+}
+
+/// Specifies the sort direction
+pub enum SortOrder {
+    /// Sorts in ascending order (A-Z)
+    Asc,
+    /// Sorts in descending order (Z-A)
+    Desc,
+}
+
+impl SortOrder {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            SortOrder::Asc => "ASC",
+            SortOrder::Desc => "DESC",
+        }
+    }
+}
+
+/// Specifies the visibility of the deleted entities
+pub enum DeletedVisibility {
+    /// Includes both deleted and non-deleted entities
+    Show,
+    /// Excludes deleted entities
+    Hide,
+    /// Includes only deleted entities
+    DeletedOnly,
+}

@@ -1,7 +1,0 @@
-[package]
-name = "imfield-storage"
-version = "0.1.0"
-edition.workspace = true
-
-[dependencies]
-imfield-storage-address.workspace = true

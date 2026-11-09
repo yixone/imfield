@@ -1,0 +1,20 @@
+[package]
+name = "imfield-database"
+version = "0.1.0"
+edition.workspace = true
+repository.workspace = true
+
+[dependencies]
+# --- Internal ---
+imfield-mimetype = { workspace = true, features = ["sqlx"] }
+imfield-models = { workspace = true, features = ["sqlx"] }
+
+imfield-storage-address = { workspace = true, features = ["sqlx"] }
+
+# --- Extern ---
+async-trait.workspace = true
+chrono.workspace = true
+sqlx = { workspace = true, features = ["sqlite", "runtime-tokio", "chrono"] }
+
+[dev-dependencies]
+imfield-snowflake.workspace = true

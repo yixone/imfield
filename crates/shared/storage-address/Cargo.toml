@@ -1,0 +1,10 @@
+[package]
+name = "imfield-storage-address"
+version = "0.1.0"
+edition.workspace = true
+
+[features]
+sqlx = ["dep:sqlx"]
+
+[dependencies]
+sqlx = { workspace = true, optional = true }

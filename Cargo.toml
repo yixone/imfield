@@ -1,31 +1,41 @@
 [workspace]
 resolver = "2"
 members = [
-    "crates/domains",
+    "crates/core/database",
+    "crates/core/models",
+    "crates/core/storage",
 
-    "crates/mimetype",
-    "crates/snowflake",
-    "crates/storage",
-
-    "crates/storage-address",
+    "crates/shared/mimetype",
+    "crates/shared/snowflake",
+    "crates/shared/storage-address",
+    "crates/shared/utils",
 ]
 
 [workspace.package]
 edition = "2024"
+repository = "https://github.com/yixone/imfield"
 
 [workspace.dependencies]
-# Internal
-imfield-domains.path = "crates/domains"
+# --- Internal ---
+imfield-database.path = "crates/core/database"
+imfield-models.path = "crates/core/models"
+imfield-storage.path = "crates/core/storage"
 
-imfield-mimetype.path = "crates/mimetype"
-imfield-snowflake.path = "crates/snowflake"
+imfield-mimetype.path = "crates/shared/mimetype"
+imfield-snowflake.path = "crates/shared/snowflake"
+imfield-storage-address.path = "crates/shared/storage-address"
+imfield-utils.path = "crates/shared/utils"
 
-imfield-storage.path = "crates/storage"
-imfield-storage-address.path = "crates/storage-address"
-
-# Extern
+# --- Extern ---
+async-trait = "0.1.89"
 base64 = "0.23.1"
 chrono = "0.4.42"
 hex = "0.4.3"
+rand = "0.10.1"
 serde = "1.0.219"
 sqlx = "0.8.5"
+tokio = "1.47.1"
+
+# --- FFI ---
+libc = "0.2.189"
+winapi = "0.3.9"
