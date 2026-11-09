@@ -50,6 +50,7 @@ impl FileRowMapper {
                 path: file.path,
                 size_bytes: file.size_bytes as u64,
                 mimetype: file.mimetype,
+                mimekind: file.mimekind,
                 duration: file.duration_ms.map(|t| Duration::from_millis(t as u64)),
                 original_filename: file.original_filename,
                 checksum: Sha256Checksum::new(
@@ -98,10 +99,10 @@ impl FileRowMapper {
     pub fn to_resource_many(files: Vec<File>, sidecars: Vec<Sidecar>) -> Vec<FileResource> {
         let mut idx: HashMap<FileId, Vec<Sidecar>> = HashMap::with_capacity(files.len());
         for s in sidecars {
-            match idx.get_mut(s.id()) {
+            match idx.get_mut(s.file_id()) {
                 Some(v) => v.push(s),
                 None => {
-                    idx.insert(s.id().clone(), vec![s]);
+                    idx.insert(s.file_id().clone(), vec![s]);
                 }
             }
         }

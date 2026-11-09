@@ -90,7 +90,7 @@ impl Sidecar {
         }
     }
 
-    pub fn id(&self) -> &FileId {
+    pub fn file_id(&self) -> &FileId {
         &self.file_id
     }
 

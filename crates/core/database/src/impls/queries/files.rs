@@ -1,5 +1,5 @@
 use imfield_models::{
-    entities::{File, Sidecar},
+    entities::{File, Sidecar, sidecar::SidecarType},
     types::id::FileId,
 };
 use sqlx::{QueryBuilder, SqliteConnection};
@@ -67,7 +67,7 @@ pub async fn insert_sidecar(
         )
         ",
     )
-    .bind(sidecar.id())
+    .bind(sidecar.file_id())
     .bind(sidecar.sidecar_type())
     .bind(sidecar.created_at())
     .bind(sidecar.path())
@@ -79,6 +79,24 @@ pub async fn insert_sidecar(
     .to_db_error()?;
 
     Ok(())
+}
+
+pub async fn load_sidecar(
+    id: &FileId,
+    ty: SidecarType,
+    conn: &mut SqliteConnection,
+) -> Result<Option<SidecarRow>, DatabaseError> {
+    sqlx::query_as(
+        "
+        SELECT * FROM sidecars
+        WHERE file_id = ? AND sidecar_type = ?
+        ",
+    )
+    .bind(id)
+    .bind(ty)
+    .fetch_optional(conn)
+    .await
+    .to_db_error()
 }
 
 pub async fn load_files_many(

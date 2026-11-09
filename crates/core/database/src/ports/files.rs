@@ -11,9 +11,9 @@ use crate::{
 
 #[async_trait::async_trait]
 pub trait FilesDatabase: Send + Sync {
-    async fn insert_file(&self, file: &File) -> Result<(), DatabaseError>;
+    async fn insert_sidecar(&self, sidecar: &Sidecar) -> Result<(), DatabaseError>;
 
-    async fn get(&self, id: &FileId) -> Result<File, DatabaseError>;
+    async fn get_file(&self, id: &FileId) -> Result<File, DatabaseError>;
 
     async fn get_sidecar(&self, id: &FileId, ty: SidecarType) -> Result<Sidecar, DatabaseError>;
 

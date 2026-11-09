@@ -11,7 +11,7 @@ use crate::{
     DatabaseError,
     types::{
         commands::{DeleteFn, UpdateFn},
-        query::{CursorPagination, DeletedVisibility, SortOrder},
+        query::{CursorPagination, DeletedVisibility, Pagination, SortOrder},
     },
 };
 
@@ -27,27 +27,27 @@ pub trait AssetsDatabase: Send + Sync {
 
     async fn get_by_state(
         &self,
-        cursor: CursorPagination<AssetId>,
+        pagination: Pagination,
         state: AssetState,
     ) -> Result<Vec<AssetId>, DatabaseError>;
 
-    async fn get_by_checksum(&self, c: &Sha256Checksum) -> Result<Vec<Asset>, DatabaseError>;
+    async fn get_by_checksum(&self, c: &Sha256Checksum) -> Result<Option<Asset>, DatabaseError>;
 
     async fn get_by_parent_id(
         &self,
         id: AssetId,
-        cursor: CursorPagination<AssetId>,
+        pagination: CursorPagination<AssetId>,
     ) -> Result<Vec<AssetResource>, DatabaseError>;
 
     async fn get_duplicates_of(
         &self,
         id: AssetId,
-        cursor: CursorPagination<AssetId>,
+        pagination: CursorPagination<AssetId>,
     ) -> Result<Vec<AssetResource>, DatabaseError>;
 
     async fn list(
         &self,
-        cursor: CursorPagination<AssetId>,
+        pagination: CursorPagination<AssetId>,
         ordering: (AssetSortBy, SortOrder),
         deleted: DeletedVisibility,
     ) -> Result<Vec<AssetResource>, DatabaseError>;
