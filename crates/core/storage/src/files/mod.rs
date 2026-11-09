@@ -1,6 +1,7 @@
 pub mod rw;
-
 pub mod stage;
-pub mod uploader;
 
 pub mod metadata;
+
+pub use metadata::FileMetadata;
+pub use stage::StagedFile;

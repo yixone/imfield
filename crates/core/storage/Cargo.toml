@@ -10,7 +10,9 @@ imfield-storage-address.workspace = true
 imfield-utils.workspace = true
 
 # --- Extern ---
+futures = { workspace = true }
 tokio = { workspace = true, features = ["io-util", "fs", "time", "rt"] }
+tokio-util = { workspace = true, features = ["io"] }
 
 # --- FFI ---
 [target.'cfg(any(target_os = "linux", target_os = "macos"))'.dependencies]
