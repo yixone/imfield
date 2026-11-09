@@ -403,7 +403,7 @@ impl Asset {
     }
 
     /// Updates whether the original file is missing from storage
-    pub fn set_is_offline(&mut self, is_offline: bool) {
+    pub fn set_offline(&mut self, is_offline: bool) {
         self.is_offline = is_offline;
         self.refresh_updated_at();
     }
@@ -467,17 +467,11 @@ impl Asset {
     ///
     /// Returns [`DomainError::EntityDeleted`] if the asset is already marked as deleted
     pub fn set_deleted(&mut self) -> Result<(), DomainError> {
-        self.ensure_not_deleted()?;
-        self.deleted_at = Some(Utc::now());
-        self.refresh_updated_at();
-        Ok(())
-    }
-
-    /// Returns `Ok(())` if the asset is not deleted, or [`DomainError::EntityDeleted`] otherwise
-    pub fn ensure_not_deleted(&self) -> Result<(), DomainError> {
         if self.is_deleted() {
             return Err(DomainError::EntityDeleted);
         }
+        self.deleted_at = Some(Utc::now());
+        self.refresh_updated_at();
         Ok(())
     }
 
@@ -493,15 +487,15 @@ impl Asset {
         self.deleted_at().is_some()
     }
 
-    /// Sets the current timestamp as the asset's update time
-    fn refresh_updated_at(&mut self) {
-        self.updated_at = Some(Utc::now());
-    }
-
     /// Updates the asset's lifecycle state
     pub fn set_state(&mut self, state: AssetState) {
         self.state = state;
         self.refresh_updated_at();
+    }
+
+    /// Sets the current timestamp as the asset's update time
+    fn refresh_updated_at(&mut self) {
+        self.updated_at = Some(Utc::now());
     }
 }
 

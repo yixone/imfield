@@ -60,8 +60,6 @@ pub struct File {
 
     /// File MIME type
     pub(crate) mimetype: MimeType,
-    /// MIME kind of the original file
-    pub(crate) mimekind: MimeKind,
 
     /// File duration (for supported files)
     pub(crate) duration: Option<Duration>,
@@ -78,7 +76,6 @@ pub struct FileData {
     pub path: StoragePath,
     pub size_bytes: u64,
     pub mimetype: MimeType,
-    pub mimekind: MimeKind,
     pub duration: Option<Duration>,
     pub original_filename: Option<String>,
     pub checksum: Sha256Checksum,
@@ -98,7 +95,6 @@ impl File {
             path: data.path,
             size_bytes: data.size_bytes,
             mimetype: data.mimetype,
-            mimekind: data.mimetype.kind(),
             duration: data.duration,
             original_filename: data.original_filename,
             checksum: data.checksum,
@@ -112,7 +108,6 @@ impl File {
             path: entry.data.path,
             size_bytes: entry.data.size_bytes,
             mimetype: entry.data.mimetype,
-            mimekind: entry.data.mimekind,
             duration: entry.data.duration,
             original_filename: entry.data.original_filename,
             checksum: entry.data.checksum,
@@ -127,7 +122,6 @@ impl File {
                 path: self.path,
                 size_bytes: self.size_bytes,
                 mimetype: self.mimetype,
-                mimekind: self.mimekind,
                 duration: self.duration,
                 original_filename: self.original_filename,
                 checksum: self.checksum,
@@ -156,7 +150,7 @@ impl File {
     }
 
     pub fn mimekind(&self) -> MimeKind {
-        self.mimekind
+        self.mimetype().kind()
     }
 
     pub fn duration(&self) -> Option<Duration> {

@@ -21,7 +21,8 @@ pub struct FileRow {
     pub path: StoragePath,
     pub size_bytes: i64,
     pub mimetype: MimeType,
-    pub mimekind: MimeKind,
+    #[sqlx(rename = "mimekind")]
+    pub _mimekind: MimeKind,
     pub duration_ms: Option<i64>,
     pub original_filename: Option<String>,
     pub checksum: Vec<u8>,
@@ -50,7 +51,6 @@ impl FileRowMapper {
                 path: file.path,
                 size_bytes: file.size_bytes as u64,
                 mimetype: file.mimetype,
-                mimekind: file.mimekind,
                 duration: file.duration_ms.map(|t| Duration::from_millis(t as u64)),
                 original_filename: file.original_filename,
                 checksum: Sha256Checksum::new(
