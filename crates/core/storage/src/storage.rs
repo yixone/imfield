@@ -26,7 +26,7 @@ impl Storage {
     /// Creates a new [`Storage`]
     pub async fn new(root: impl Into<PathBuf>) -> Result<Self, StorageError> {
         let root = root.into();
-        create_parents(&root).await?;
+        tokio::fs::create_dir_all(&root).await?;
 
         let storage = Storage { root };
         Ok(storage)

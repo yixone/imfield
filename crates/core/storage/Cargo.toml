@@ -14,6 +14,11 @@ futures = { workspace = true }
 tokio = { workspace = true, features = ["io-util", "fs", "time", "rt"] }
 tokio-util = { workspace = true, features = ["io"] }
 
+# --- Tests ---
+[dev-dependencies]
+tempfile.workspace = true
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+
 # --- FFI ---
 [target.'cfg(any(target_os = "linux", target_os = "macos"))'.dependencies]
 libc.workspace = true
