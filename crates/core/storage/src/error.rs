@@ -1,6 +1,9 @@
 pub enum StorageError {
     InvalidPath,
+    FileNotFound,
+    AlreadyExists,
     NoStorageSpace,
+    InvalidSeekRange,
     Io(std::io::Error),
 }
 
