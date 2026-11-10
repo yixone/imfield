@@ -12,3 +12,4 @@ pub mod layout;
 pub mod storage;
 
 pub use error::StorageError;
+pub use storage::Storage;
