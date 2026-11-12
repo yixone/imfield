@@ -5,7 +5,7 @@ members = [
     "crates/core/models",
     "crates/core/storage",
 
-    "crates/shared/event-bus",
+    "crates/shared/event-bus", "crates/shared/jobs-core",
     "crates/shared/mimetype",
     "crates/shared/snowflake",
     "crates/shared/storage-address",
