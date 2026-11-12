@@ -671,6 +671,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "imfield-event-bus"
+version = "0.1.0"
+dependencies = [
+ "tokio",
+]
+
+[[package]]
 name = "imfield-mimetype"
 version = "0.1.0"
 dependencies = [
