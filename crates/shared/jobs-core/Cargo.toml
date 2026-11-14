@@ -5,3 +5,11 @@ edition.workspace = true
 repository.workspace = true
 
 [dependencies]
+# --- Workspace ---
+imfield-snowflake.workspace = true
+
+# --- Extern ---
+async-trait.workspace = true
+chrono.workspace = true
+tokio = { workspace = true, features = ["macros", "time", "rt-multi-thread"] }
+tokio-util = { workspace = true, features = ["io"] }
