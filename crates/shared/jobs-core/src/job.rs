@@ -1,6 +1,7 @@
 use std::fmt::Debug;
 
 use chrono::{DateTime, Duration, Utc};
+use tokio_util::sync::CancellationToken;
 
 use crate::utils;
 
@@ -10,87 +11,120 @@ pub trait ExecutableJob {
     type Error: Debug;
 
     fn name(&self) -> &'static str;
-    fn retry_strategy(&self) -> Option<RetryStrategy> {
+
+    fn allow_concurrency(&self) -> bool {
+        true
+    }
+
+    fn retry_delay(&self) -> Option<Duration> {
         None
     }
 
     async fn execute(&self, ctx: &Self::Context) -> Result<(), Self::Error>;
 }
 
-pub struct Job<E: ExecutableJob> {
-    pub id: JobId,
-
-    pub retry: Option<JobRetry>,
-    pub state: JobState,
-    pub job_type: JobType,
-
-    pub data: E,
-
-    pub created_at: i64,
-    pub finished_at: Option<i64>,
-}
-
-impl<E> Job<E>
-where
-    E: ExecutableJob,
-{
-    pub fn new(id: JobId, job_type: JobType, retry: Option<JobRetry>, data: E) -> Self {
-        Job {
-            id,
-            retry,
-            state: JobState::Queued,
-            job_type,
-            data,
-            created_at: utils::get_now_ms(),
-            finished_at: None,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum JobState {
-    Queued,
-    Runned,
-    Completed,
-    Failed,
-    Canceled,
-}
-
-pub enum JobType {
-    OneShot,
-    ScheduledAt(DateTime<Utc>),
-}
-
-pub enum RetryStrategy {
-    Interval(Duration),
-    Exponential(Duration),
-}
-
-pub struct JobRetry {
-    retries: u32,
-    max_retries: u32,
-    strategy: RetryStrategy,
-}
-
-impl JobRetry {
-    pub(crate) fn can_retry(&self) -> bool {
-        self.retries < self.max_retries
-    }
-
-    pub(crate) fn retry_at(&mut self) -> DateTime<Utc> {
-        self.retries += 1;
-        match &self.strategy {
-            RetryStrategy::Interval(t) => Utc::now() + *t,
-            RetryStrategy::Exponential(t) => Utc::now() + *t * 2_i32.pow(self.retries),
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct JobId(imfield_snowflake::SnowflakeId);
 
 impl From<imfield_snowflake::SnowflakeId> for JobId {
     fn from(id: imfield_snowflake::SnowflakeId) -> Self {
         JobId(id)
+    }
+}
+
+pub struct JobItem<E: ExecutableJob> {
+    id: JobId,
+    data: E,
+    retries: u32,
+    retry_delay: Option<Duration>,
+    created_at: i64,
+}
+
+impl<E> JobItem<E>
+where
+    E: ExecutableJob,
+{
+    pub fn new(id: JobId, data: E) -> Self {
+        JobItem {
+            id,
+            retry_delay: data.retry_delay(),
+            created_at: utils::get_now_ms(),
+            retries: 0,
+            data,
+        }
+    }
+
+    pub fn id(&self) -> JobId {
+        self.id
+    }
+
+    pub fn name(&self) -> &'static str {
+        self.data.name()
+    }
+
+    pub fn allow_concurrency(&self) -> bool {
+        self.data.allow_concurrency()
+    }
+
+    pub async fn execute(&self, ctx: &E::Context) -> Result<(), E::Error> {
+        self.data.execute(ctx).await
+    }
+
+    pub fn retries(&self) -> u32 {
+        self.retries
+    }
+
+    pub fn add_retry(&mut self) -> u32 {
+        self.retries += 1;
+        self.retries
+    }
+
+    #[inline]
+    pub fn can_retry(&self) -> bool {
+        self.retry_delay().is_some()
+    }
+
+    pub fn retry_delay(&self) -> Option<Duration> {
+        self.retry_delay
+    }
+
+    pub fn created_at(&self) -> i64 {
+        self.created_at
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum JobType {
+    Normal,
+    Schedule {
+        scheduled_at: DateTime<Utc>,
+    },
+    Interval {
+        next_run_at: DateTime<Utc>,
+        interval: Duration,
+    },
+}
+
+pub enum InactiveJobStatus {
+    Finished,
+    Failed,
+    Unknown,
+}
+
+pub struct ActiveJob<E>
+where
+    E: ExecutableJob,
+{
+    cancel: CancellationToken,
+    runned_at: i64,
+    job: JobItem<E>,
+}
+
+impl<E> ActiveJob<E>
+where
+    E: ExecutableJob,
+{
+    pub fn item(&self) -> &JobItem<E> {
+        &self.job
     }
 }
