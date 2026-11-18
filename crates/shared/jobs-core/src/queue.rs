@@ -19,7 +19,7 @@ impl<E> JobsQueue<E>
 where
     E: ExecutableJob,
 {
-    pub(crate) fn lock<'a>(&'a self) -> MutexGuard<'a, QueueInner<E>> {
+    fn lock<'a>(&'a self) -> MutexGuard<'a, QueueInner<E>> {
         self.state.lock().unwrap_or_else(|p| p.into_inner())
     }
 
@@ -71,9 +71,9 @@ where
         lock.inactive.drain(..=len / 2).count()
     }
 
-    pub fn add_active(&self, job: ActiveJob<E>) {
+    pub fn add_active(&self, active: ActiveJob<E>) {
         let mut lock = self.lock();
-        lock.active.insert(job.item().id(), job);
+        lock.active.insert(active.job.id(), active);
     }
 
     pub fn remove_active(&self, id: JobId) -> Option<ActiveJob<E>> {
@@ -81,17 +81,17 @@ where
         lock.active.remove(&id)
     }
 
-    pub fn add_inactive(&self, job: JobItem<E>, status: InactiveJobStatus) {
+    pub fn add_inactive(&self, job: JobItem<E>, status: InactiveJobStatus<E>) {
         let mut lock = self.lock();
         lock.inactive.push((job, status));
     }
 }
 
-pub(crate) struct QueueInner<E>
+struct QueueInner<E>
 where
     E: ExecutableJob,
 {
-    pub active: HashMap<JobId, ActiveJob<E>>,
-    pub queued: VecDeque<JobItem<E>>,
-    pub inactive: Vec<(JobItem<E>, InactiveJobStatus)>,
+    active: HashMap<JobId, ActiveJob<E>>,
+    queued: VecDeque<JobItem<E>>,
+    inactive: Vec<(JobItem<E>, InactiveJobStatus<E>)>,
 }

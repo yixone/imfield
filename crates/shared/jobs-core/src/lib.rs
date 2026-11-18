@@ -1,4 +1,5 @@
-mod dispatcher;
+pub mod dispatcher;
+
 mod queue;
 mod scheduler;
 

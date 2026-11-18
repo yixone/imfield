@@ -1,14 +1,14 @@
-use std::fmt::Debug;
+use std::{fmt::Debug, time::Duration};
 
-use chrono::{DateTime, Duration, Utc};
+use tokio::time::Instant;
 use tokio_util::sync::CancellationToken;
 
 use crate::utils;
 
 #[async_trait::async_trait]
-pub trait ExecutableJob {
+pub trait ExecutableJob: Send + Sync {
     type Context: Clone + Send + Sync + 'static;
-    type Error: Debug;
+    type Error: Debug + Send + Sync;
 
     fn name(&self) -> &'static str;
 
@@ -16,6 +16,7 @@ pub trait ExecutableJob {
         true
     }
 
+    fn max_retries(&self) -> u32;
     fn retry_delay(&self) -> Option<Duration> {
         None
     }
@@ -32,9 +33,11 @@ impl From<imfield_snowflake::SnowflakeId> for JobId {
     }
 }
 
+#[derive(Clone)]
 pub struct JobItem<E: ExecutableJob> {
     id: JobId,
     data: E,
+    job_type: JobType,
     retries: u32,
     retry_delay: Option<Duration>,
     created_at: i64,
@@ -44,9 +47,10 @@ impl<E> JobItem<E>
 where
     E: ExecutableJob,
 {
-    pub fn new(id: JobId, data: E) -> Self {
+    pub fn new(id: JobId, job_type: JobType, data: E) -> Self {
         JobItem {
             id,
+            job_type,
             retry_delay: data.retry_delay(),
             created_at: utils::get_now_ms(),
             retries: 0,
@@ -66,6 +70,10 @@ where
         self.data.allow_concurrency()
     }
 
+    pub fn max_retries(&self) -> u32 {
+        self.data.max_retries()
+    }
+
     pub async fn execute(&self, ctx: &E::Context) -> Result<(), E::Error> {
         self.data.execute(ctx).await
     }
@@ -79,9 +87,8 @@ where
         self.retries
     }
 
-    #[inline]
-    pub fn can_retry(&self) -> bool {
-        self.retry_delay().is_some()
+    pub fn reset_retries(&mut self) {
+        self.retries = 0;
     }
 
     pub fn retry_delay(&self) -> Option<Duration> {
@@ -91,40 +98,60 @@ where
     pub fn created_at(&self) -> i64 {
         self.created_at
     }
+
+    pub fn job_type(&self) -> JobType {
+        self.job_type
+    }
+
+    pub fn set_job_type(&mut self, job_type: JobType) {
+        self.job_type = job_type;
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
 pub enum JobType {
     Normal,
     Schedule {
-        scheduled_at: DateTime<Utc>,
+        scheduled_at: Instant,
     },
     Interval {
-        next_run_at: DateTime<Utc>,
+        next_run_at: Instant,
         interval: Duration,
     },
 }
 
-pub enum InactiveJobStatus {
+pub enum InactiveJobStatus<E>
+where
+    E: ExecutableJob,
+{
     Finished,
-    Failed,
+    Failed(E::Error),
     Unknown,
 }
 
+#[derive(Clone)]
 pub struct ActiveJob<E>
 where
     E: ExecutableJob,
 {
     cancel: CancellationToken,
-    runned_at: i64,
-    job: JobItem<E>,
+    runned_at: Instant,
+    pub job: JobItem<E>,
 }
 
 impl<E> ActiveJob<E>
 where
     E: ExecutableJob,
 {
-    pub fn item(&self) -> &JobItem<E> {
-        &self.job
+    pub fn new(job: JobItem<E>) -> Self {
+        ActiveJob {
+            cancel: CancellationToken::new(),
+            runned_at: Instant::now(),
+            job,
+        }
+    }
+
+    pub fn cancel(&self) {
+        self.cancel.cancel();
     }
 }
