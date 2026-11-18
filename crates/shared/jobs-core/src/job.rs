@@ -8,7 +8,7 @@ use crate::utils;
 #[async_trait::async_trait]
 pub trait ExecutableJob: Send + Sync {
     type Context: Clone + Send + Sync + 'static;
-    type Error: Debug + Send + Sync;
+    type Error: Debug + Send + Sync + Clone;
 
     fn name(&self) -> &'static str;
 
@@ -21,7 +21,11 @@ pub trait ExecutableJob: Send + Sync {
         None
     }
 
-    async fn execute(&self, ctx: &Self::Context) -> Result<(), Self::Error>;
+    async fn execute(
+        &self,
+        ctx: &Self::Context,
+        cancel: CancellationToken,
+    ) -> Result<(), Self::Error>;
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -38,6 +42,7 @@ pub struct JobItem<E: ExecutableJob> {
     id: JobId,
     data: E,
     job_type: JobType,
+    state: JobState<E>,
     retries: u32,
     retry_delay: Option<Duration>,
     created_at: i64,
@@ -51,6 +56,7 @@ where
         JobItem {
             id,
             job_type,
+            state: JobState::Queued,
             retry_delay: data.retry_delay(),
             created_at: utils::get_now_ms(),
             retries: 0,
@@ -74,8 +80,12 @@ where
         self.data.max_retries()
     }
 
-    pub async fn execute(&self, ctx: &E::Context) -> Result<(), E::Error> {
-        self.data.execute(ctx).await
+    pub async fn execute(
+        &self,
+        ctx: &E::Context,
+        cancel: CancellationToken,
+    ) -> Result<(), E::Error> {
+        self.data.execute(ctx, cancel).await
     }
 
     pub fn retries(&self) -> u32 {
@@ -106,6 +116,14 @@ where
     pub fn set_job_type(&mut self, job_type: JobType) {
         self.job_type = job_type;
     }
+
+    pub fn state(&self) -> &JobState<E> {
+        &self.state
+    }
+
+    pub fn set_state(&mut self, state: JobState<E>) {
+        self.state = state;
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -120,38 +138,15 @@ pub enum JobType {
     },
 }
 
-pub enum InactiveJobStatus<E>
+#[derive(Debug, Clone)]
+pub enum JobState<E>
 where
     E: ExecutableJob,
 {
-    Finished,
+    Queued,
+    Waited,
+    Active,
     Failed(E::Error),
-    Unknown,
-}
-
-#[derive(Clone)]
-pub struct ActiveJob<E>
-where
-    E: ExecutableJob,
-{
-    cancel: CancellationToken,
-    runned_at: Instant,
-    pub job: JobItem<E>,
-}
-
-impl<E> ActiveJob<E>
-where
-    E: ExecutableJob,
-{
-    pub fn new(job: JobItem<E>) -> Self {
-        ActiveJob {
-            cancel: CancellationToken::new(),
-            runned_at: Instant::now(),
-            job,
-        }
-    }
-
-    pub fn cancel(&self) {
-        self.cancel.cancel();
-    }
+    Finished,
+    Cancelled,
 }

@@ -7,23 +7,17 @@ use tokio::{sync::Notify, time::Instant};
 
 use crate::job::{ExecutableJob, JobId, JobItem, JobType};
 
-pub struct JobsSchedule<E>
-where
-    E: ExecutableJob,
-{
-    state: Mutex<ScheduleState<E>>,
+pub struct JobsSchedule {
+    state: Mutex<ScheduleState>,
     notify: Notify,
 }
 
-impl<E> JobsSchedule<E>
-where
-    E: ExecutableJob + Clone,
-{
-    fn lock<'a>(&'a self) -> MutexGuard<'a, ScheduleState<E>> {
+impl JobsSchedule {
+    fn lock<'a>(&'a self) -> MutexGuard<'a, ScheduleState> {
         self.state.lock().unwrap_or_else(|p| p.into_inner())
     }
 
-    pub async fn next(&self) -> Option<JobItem<E>> {
+    pub async fn next(&self) -> Option<JobId> {
         loop {
             let next = self.take_next()?;
 
@@ -39,13 +33,20 @@ where
         }
     }
 
-    pub fn schedule(&self, job: JobItem<E>) {
+    pub fn schedule<E>(&self, job: &JobItem<E>)
+    where
+        E: ExecutableJob,
+    {
         let next_run = match job.job_type() {
             JobType::Normal => Instant::now(),
             JobType::Schedule { scheduled_at } => scheduled_at,
             JobType::Interval { next_run_at, .. } => next_run_at,
         };
-        let waited = WaitedJob { next_run, job };
+
+        let waited = WaitedJob {
+            next_run,
+            job: job.id(),
+        };
 
         let mut lock = self.lock();
         lock.waited.push(waited);
@@ -58,7 +59,7 @@ where
         let mut lock = self.lock();
 
         if let Some(n) = &lock.next
-            && n.job.id() == id
+            && n.job == id
         {
             lock.next = None;
             drop(lock);
@@ -67,13 +68,13 @@ where
             return;
         }
 
-        lock.waited.retain(|j| j.job.id() != id);
+        lock.waited.retain(|j| j.job != id);
 
         drop(lock);
         self.notify.notify_one();
     }
 
-    pub fn take_next(&self) -> Option<WaitedJob<E>> {
+    pub fn take_next(&self) -> Option<WaitedJob> {
         let mut lock = self.lock();
 
         let next = lock.waited.pop()?;
@@ -90,45 +91,35 @@ where
             lock.next = None;
         }
     }
-
-    pub fn notify(&self) -> &Notify {
-        &self.notify
-    }
 }
 
-struct ScheduleState<E>
-where
-    E: ExecutableJob,
-{
-    waited: BinaryHeap<WaitedJob<E>>,
-    next: Option<WaitedJob<E>>,
+struct ScheduleState {
+    waited: BinaryHeap<WaitedJob>,
+    next: Option<WaitedJob>,
 }
 
 #[derive(Clone)]
-pub struct WaitedJob<E>
-where
-    E: ExecutableJob,
-{
+pub struct WaitedJob {
     next_run: Instant,
-    job: JobItem<E>,
+    job: JobId,
 }
 
-impl<E: ExecutableJob> Ord for WaitedJob<E> {
+impl Ord for WaitedJob {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         other.next_run.cmp(&self.next_run)
     }
 }
 
-impl<E: ExecutableJob> PartialOrd for WaitedJob<E> {
+impl PartialOrd for WaitedJob {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl<E: ExecutableJob> PartialEq for WaitedJob<E> {
+impl PartialEq for WaitedJob {
     fn eq(&self, other: &Self) -> bool {
-        self.job.id() == other.job.id()
+        self.job == other.job
     }
 }
 
-impl<E: ExecutableJob> Eq for WaitedJob<E> {}
+impl Eq for WaitedJob {}

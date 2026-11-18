@@ -4,9 +4,10 @@ use tokio::{task::JoinHandle, time::Instant};
 use tokio_util::sync::CancellationToken;
 
 use crate::{
-    job::{ActiveJob, ExecutableJob, InactiveJobStatus, JobId, JobItem, JobType},
-    queue::JobsQueue,
+    job::{ExecutableJob, JobId, JobItem, JobState, JobType},
+    queue::{ActiveJob, JobsQueue},
     scheduler::JobsSchedule,
+    storage::JobsStorage,
 };
 
 pub struct JobsDispatcher<E>
@@ -16,8 +17,10 @@ where
     context: Arc<E::Context>,
     flake: imfield_snowflake::SnowflakeGenerator,
 
-    queue: Arc<JobsQueue<E>>,
-    schedule: Arc<JobsSchedule<E>>,
+    queue: Arc<JobsQueue>,
+    schedule: Arc<JobsSchedule>,
+
+    storage: Arc<JobsStorage<E>>,
 
     cancel: CancellationToken,
 
@@ -34,6 +37,7 @@ where
 
         for _ in 0..self.workers {
             let queue = self.queue.clone();
+            let storage = self.storage.clone();
             let cancel = self.cancel.clone();
             let ctx = self.context.clone();
             let schedule = self.schedule.clone();
@@ -41,41 +45,50 @@ where
             let handle = tokio::spawn(async move {
                 loop {
                     tokio::select! {
-                        job = queue.pool() => {
-                            let active = ActiveJob::new(job);
+                        job_id = queue.pool() => {
+                            let Some(mut job) = storage.try_activate(job_id) else {
+                                continue
+                            };
+
+                            let active = ActiveJob::new(job_id);
                             queue.add_active(active.clone());
 
-
-                            match active.job.execute(&ctx).await {
+                            match job.execute(&ctx, active.cancel_token()).await {
                                 Ok(_) => {
-                                    let mut job = active.job;
                                     queue.remove_active(job.id());
 
                                     match job.job_type() {
                                         JobType::Normal | JobType::Schedule { .. } => {
-                                            queue.add_inactive(job, InactiveJobStatus::Finished);
+                                            job.set_state(JobState::Finished);
+
+                                            storage.save(&job);
                                         },
                                         JobType::Interval { interval, .. } => {
                                             job.reset_retries();
+                                            job.set_state(JobState::Waited);
                                             job.set_job_type(JobType::Interval { next_run_at: Instant::now() + interval, interval });
-                                            schedule.schedule(job);
+
+                                            storage.save(&job);
+                                            schedule.schedule(&job);
                                         },
                                     }
                                 },
                                 Err(e) => {
-                                    let mut job = active.job;
                                     queue.remove_active(job.id());
 
                                     if job.retries() >= job.max_retries() {
-                                        queue.add_inactive(job, InactiveJobStatus::Failed(e));
+                                        job.set_state(JobState::Failed(e));
+                                        storage.save(&job);
                                         continue;
                                     }
 
                                     let Some(delay) = job.retry_delay() else {
-                                        queue.add_inactive(job, InactiveJobStatus::Failed(e));
+                                        job.set_state(JobState::Failed(e));
+                                        storage.save(&job);
                                         continue;
                                     };
 
+                                    job.set_state(JobState::Waited);
                                     job.add_retry();
                                     job.set_job_type(
                                         match job.job_type() {
@@ -84,7 +97,8 @@ where
                                         }
                                     );
 
-                                    schedule.schedule(job);
+                                    storage.save(&job);
+                                    schedule.schedule(&job);
                                 },
                             }
                         }
@@ -103,12 +117,15 @@ where
         let queue = self.queue.clone();
         let schedule = self.schedule.clone();
         let cancel = self.cancel.clone();
+        let storage = self.storage.clone();
 
         tokio::spawn(async move {
             loop {
                 tokio::select! {
-                    Some(job) = schedule.next() => {
-                        queue.enqueue(job);
+                    Some(job_id) = schedule.next() => {
+                        if storage.try_queued(job_id) {
+                            queue.enqueue(job_id);
+                        }
                     }
                     _ = cancel.cancelled() => {
                         return;
@@ -119,60 +136,57 @@ where
     }
 
     pub async fn schedule(&self, job: E, run_at: Instant) -> JobId {
-        let id = self.flake.get_id_as();
-        let job = JobItem::new(
-            id,
+        let mut job = JobItem::new(
+            self.flake.get_id_as(),
             JobType::Schedule {
                 scheduled_at: run_at,
             },
             job,
         );
+        job.set_state(JobState::Waited);
 
-        self.schedule.schedule(job);
+        self.storage.save(&job);
+        self.schedule.schedule(&job);
 
-        id
+        job.id()
     }
 
     pub async fn schedule_interval(&self, job: E, run_at: Instant, interval: Duration) -> JobId {
-        let id = self.flake.get_id_as();
-        let job = JobItem::new(
-            id,
+        let mut job = JobItem::new(
+            self.flake.get_id_as(),
             JobType::Interval {
                 next_run_at: run_at,
                 interval,
             },
             job,
         );
+        job.set_state(JobState::Waited);
 
-        self.schedule.schedule(job);
+        self.storage.save(&job);
+        self.schedule.schedule(&job);
 
-        id
-    }
-
-    pub async fn remove_scheduled(&self, id: JobId) {
-        self.schedule.remove_scheduled(id);
+        job.id()
     }
 
     // --- Queue ---
-    pub async fn enqueue(&self, job: E) -> JobId {
-        let id = self.flake.get_id_as();
-        let job = JobItem::new(id, JobType::Normal, job);
+    pub async fn queue_add(&self, job: E) -> JobId {
+        let mut job = JobItem::new(self.flake.get_id_as(), JobType::Normal, job);
+        job.set_state(JobState::Queued);
 
-        self.queue.enqueue(job);
+        self.storage.save(&job);
+        self.queue.enqueue(job.id());
 
-        id
+        job.id()
     }
 
-    pub async fn remove(&self, id: JobId) -> bool {
-        if let Some(active) = self.queue.remove_active(id) {
+    // --- State ---
+    pub async fn cancel(&self, id: JobId) -> bool {
+        // If the task is already running, cancels it
+        if let Some(active) = self.queue.get_active(id) {
             active.cancel();
-            return true;
         }
 
-        self.queue.remove_queued(id).is_some()
-    }
-
-    pub async fn clear_queue(&self) -> usize {
-        self.queue.clear_queued()
+        // Sets the status to "cancelled" in the storage
+        self.storage.try_cancel(id)
     }
 }
