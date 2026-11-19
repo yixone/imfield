@@ -13,6 +13,16 @@ pub struct JobsSchedule {
 }
 
 impl JobsSchedule {
+    pub fn new() -> Self {
+        JobsSchedule {
+            state: Mutex::new(ScheduleState {
+                waited: BinaryHeap::new(),
+                next: None,
+            }),
+            notify: Notify::new(),
+        }
+    }
+
     fn lock<'a>(&'a self) -> MutexGuard<'a, ScheduleState> {
         self.state.lock().unwrap_or_else(|p| p.into_inner())
     }

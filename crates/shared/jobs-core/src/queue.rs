@@ -14,6 +14,16 @@ pub struct JobsQueue {
 }
 
 impl JobsQueue {
+    pub fn new() -> Self {
+        JobsQueue {
+            state: Mutex::new(QueueInner {
+                active: HashMap::new(),
+                queued: VecDeque::new(),
+            }),
+            notify: Notify::new(),
+        }
+    }
+
     fn lock<'a>(&'a self) -> MutexGuard<'a, QueueInner> {
         self.state.lock().unwrap_or_else(|p| p.into_inner())
     }

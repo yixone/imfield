@@ -31,6 +31,24 @@ impl<E> JobsDispatcher<E>
 where
     E: ExecutableJob + Clone + 'static,
 {
+    pub fn new(
+        context: Arc<E::Context>,
+        flake: imfield_snowflake::SnowflakeGenerator,
+        workers: usize,
+    ) -> Self {
+        assert_ne!(workers, 0);
+
+        JobsDispatcher {
+            context,
+            flake,
+            queue: Arc::new(JobsQueue::new()),
+            schedule: Arc::new(JobsSchedule::new()),
+            storage: Arc::new(JobsStorage::new()),
+            cancel: CancellationToken::new(),
+            workers,
+        }
+    }
+
     // --- Workers ---
     fn workers_loop(&self) -> Vec<JoinHandle<()>> {
         let mut handles = Vec::with_capacity(self.workers);
@@ -65,7 +83,7 @@ where
                                         },
                                         JobType::Interval { interval, .. } => {
                                             job.reset_retries();
-                                            job.set_state(JobState::Waited);
+                                            job.set_state(JobState::Scheduled);
                                             job.set_job_type(JobType::Interval { next_run_at: Instant::now() + interval, interval });
 
                                             storage.save(&job);
@@ -88,7 +106,7 @@ where
                                         continue;
                                     };
 
-                                    job.set_state(JobState::Waited);
+                                    job.set_state(JobState::Scheduled);
                                     job.add_retry();
                                     job.set_job_type(
                                         match job.job_type() {
@@ -135,7 +153,7 @@ where
         })
     }
 
-    pub async fn schedule(&self, job: E, run_at: Instant) -> JobId {
+    pub fn schedule(&self, job: E, run_at: Instant) -> JobId {
         let mut job = JobItem::new(
             self.flake.get_id_as(),
             JobType::Schedule {
@@ -143,7 +161,7 @@ where
             },
             job,
         );
-        job.set_state(JobState::Waited);
+        job.set_state(JobState::Scheduled);
 
         self.storage.save(&job);
         self.schedule.schedule(&job);
@@ -151,7 +169,7 @@ where
         job.id()
     }
 
-    pub async fn schedule_interval(&self, job: E, run_at: Instant, interval: Duration) -> JobId {
+    pub fn schedule_interval(&self, job: E, run_at: Instant, interval: Duration) -> JobId {
         let mut job = JobItem::new(
             self.flake.get_id_as(),
             JobType::Interval {
@@ -160,7 +178,7 @@ where
             },
             job,
         );
-        job.set_state(JobState::Waited);
+        job.set_state(JobState::Scheduled);
 
         self.storage.save(&job);
         self.schedule.schedule(&job);
@@ -169,7 +187,7 @@ where
     }
 
     // --- Queue ---
-    pub async fn queue_add(&self, job: E) -> JobId {
+    pub fn queue_add(&self, job: E) -> JobId {
         let mut job = JobItem::new(self.flake.get_id_as(), JobType::Normal, job);
         job.set_state(JobState::Queued);
 
@@ -179,8 +197,13 @@ where
         job.id()
     }
 
+    pub fn cancel_inactive(&self) {
+        self.queue.clear_queued();
+        self.storage.cancel_inactive();
+    }
+
     // --- State ---
-    pub async fn cancel(&self, id: JobId) -> bool {
+    pub fn cancel(&self, id: JobId) -> bool {
         // If the task is already running, cancels it
         if let Some(active) = self.queue.get_active(id) {
             active.cancel();
@@ -189,4 +212,16 @@ where
         // Sets the status to "cancelled" in the storage
         self.storage.try_cancel(id)
     }
+}
+
+pub fn run<E>(dispatcher: &JobsDispatcher<E>) -> Vec<JoinHandle<()>>
+where
+    E: ExecutableJob + Clone + 'static,
+{
+    let mut handles = Vec::with_capacity(dispatcher.workers + 1);
+
+    handles.push(dispatcher.scheduler_loop());
+    handles.extend(dispatcher.workers_loop());
+
+    handles
 }

@@ -144,7 +144,7 @@ where
     E: ExecutableJob,
 {
     Queued,
-    Waited,
+    Scheduled,
     Active,
     Failed(E::Error),
     Finished,

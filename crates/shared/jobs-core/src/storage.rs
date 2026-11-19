@@ -16,6 +16,12 @@ impl<E> JobsStorage<E>
 where
     E: ExecutableJob + Clone,
 {
+    pub fn new() -> Self {
+        JobsStorage {
+            state: Mutex::new(HashMap::new()),
+        }
+    }
+
     fn lock<'a>(&'a self) -> MutexGuard<'a, HashMap<JobId, JobItem<E>>> {
         self.state.lock().unwrap_or_else(|p| p.into_inner())
     }
@@ -53,7 +59,7 @@ where
             return false;
         };
 
-        if !matches!(job.state(), JobState::Waited) {
+        if !matches!(job.state(), JobState::Scheduled) {
             return false;
         }
 
@@ -78,5 +84,14 @@ where
     pub fn delete(&self, id: JobId) -> Option<JobItem<E>> {
         let mut lock = self.lock();
         lock.remove(&id)
+    }
+
+    pub fn cancel_inactive(&self) {
+        let mut lock = self.lock();
+        for j in lock.values_mut() {
+            if matches!(j.state(), JobState::Scheduled | JobState::Queued) {
+                j.set_state(JobState::Cancelled);
+            }
+        }
     }
 }
