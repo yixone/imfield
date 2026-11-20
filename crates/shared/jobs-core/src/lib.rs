@@ -1,3 +1,6 @@
+// FIXME: temp `allow`
+#![allow(unused)]
+
 mod dispatcher;
 mod job;
 mod queue;
