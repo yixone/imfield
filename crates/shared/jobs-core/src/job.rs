@@ -5,22 +5,32 @@ use tokio_util::sync::CancellationToken;
 
 use crate::utils;
 
+/// A job that can be executed
+///
+/// Each job provides an execution context type, an error type and an
+/// asynchronous execution method. The dispatcher uses the job's retry
+/// configuration to manage its execution
 #[async_trait::async_trait]
 pub trait ExecutableJob: Send + Sync {
-    type Context: Clone + Send + Sync + 'static;
+    /// The shared context required to execute this job
+    type Context: Send + Sync + 'static;
+    /// The error returned when job execution fails
     type Error: Debug + Send + Sync + Clone;
 
+    /// Returns the static name identifying this job type
+    ///
+    /// The name can be used for logging, monitoring and job inspection
     fn name(&self) -> &'static str;
 
-    fn allow_concurrency(&self) -> bool {
-        true
-    }
-
+    /// Returns the maximum number of retries allowed after execution fails
     fn max_retries(&self) -> u32;
-    fn retry_delay(&self) -> Option<Duration> {
-        None
-    }
 
+    /// Returns the delay before retrying a failed execution
+    ///
+    /// Returning [`None`] disables automatic retries
+    fn retry_delay(&self) -> Option<Duration>;
+
+    /// Executes the job asynchronously
     async fn execute(
         &self,
         ctx: &Self::Context,
@@ -28,6 +38,7 @@ pub trait ExecutableJob: Send + Sync {
     ) -> Result<(), Self::Error>;
 }
 
+/// An unique identifier assigned to a job
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct JobId(imfield_snowflake::SnowflakeId);
 
@@ -37,6 +48,7 @@ impl From<imfield_snowflake::SnowflakeId> for JobId {
     }
 }
 
+/// An individual job instance managed by the dispatcher
 #[derive(Clone)]
 pub struct JobItem<E: ExecutableJob> {
     id: JobId,
@@ -70,10 +82,6 @@ where
 
     pub fn name(&self) -> &'static str {
         self.data.name()
-    }
-
-    pub fn allow_concurrency(&self) -> bool {
-        self.data.allow_concurrency()
     }
 
     pub fn max_retries(&self) -> u32 {
@@ -126,18 +134,22 @@ where
     }
 }
 
+/// Defines how and when a job is executed
 #[derive(Debug, Clone, Copy)]
 pub enum JobType {
     Normal,
+
     Schedule {
         scheduled_at: Instant,
     },
+
     Interval {
         next_run_at: Instant,
         interval: Duration,
     },
 }
 
+/// Represents the current execution state of a job
 #[derive(Debug, Clone)]
 pub enum JobState<E>
 where

@@ -10,20 +10,20 @@ use crate::{
     storage::JobsStorage,
 };
 
+/// A lightweight in-process dispatcher for background jobs
+///
+/// `JobsDispatcher` manages job execution using a fixed number of workers,
+/// an in-memory queue and a scheduler for delayed and recurring jobs
 pub struct JobsDispatcher<E>
 where
     E: ExecutableJob,
 {
     context: Arc<E::Context>,
     flake: imfield_snowflake::SnowflakeGenerator,
-
     queue: Arc<JobsQueue>,
     schedule: Arc<JobsSchedule>,
-
     storage: Arc<JobsStorage<E>>,
-
     cancel: CancellationToken,
-
     workers: usize,
 }
 
@@ -31,6 +31,14 @@ impl<E> JobsDispatcher<E>
 where
     E: ExecutableJob + Clone + 'static,
 {
+    /// Creates a new job dispatcher
+    ///
+    /// The dispatcher is initialized with an execution context, an ID
+    /// generator and a fixed number of workers
+    ///
+    /// # Panics
+    ///
+    /// Panics if `workers = 0`
     pub fn new(
         context: Arc<E::Context>,
         flake: imfield_snowflake::SnowflakeGenerator,
@@ -49,7 +57,92 @@ where
         }
     }
 
-    // --- Workers ---
+    /// Schedules a job for execution at the specified time
+    ///
+    /// The job is added to the scheduler and becomes eligible for
+    /// execution when `run_at` is reached
+    ///
+    /// Returns the ID assigned to the job
+    pub fn schedule(&self, job: E, run_at: Instant) -> JobId {
+        let mut job = JobItem::new(
+            self.flake.get_id_as(),
+            JobType::Schedule {
+                scheduled_at: run_at,
+            },
+            job,
+        );
+        job.set_state(JobState::Scheduled);
+
+        self.storage.save(&job);
+        self.schedule.schedule(&job);
+
+        job.id()
+    }
+
+    /// Schedules a recurring job
+    ///
+    /// The first execution is scheduled for `run_at`. After each successful
+    /// execution, the next run is scheduled after `interval` has elapsed
+    ///
+    /// Returns the ID assigned to the job
+    pub fn schedule_interval(&self, job: E, run_at: Instant, interval: Duration) -> JobId {
+        let mut job = JobItem::new(
+            self.flake.get_id_as(),
+            JobType::Interval {
+                next_run_at: run_at,
+                interval,
+            },
+            job,
+        );
+        job.set_state(JobState::Scheduled);
+
+        self.storage.save(&job);
+        self.schedule.schedule(&job);
+
+        job.id()
+    }
+
+    /// Adds a job to the queue for immediate execution
+    ///
+    /// The job becomes available to workers as soon as it is enqueued
+    ///
+    /// Returns the ID assigned to the job
+    pub fn queue_add(&self, job: E) -> JobId {
+        let mut job = JobItem::new(self.flake.get_id_as(), JobType::Normal, job);
+        job.set_state(JobState::Queued);
+
+        self.storage.save(&job);
+        self.queue.enqueue(job.id());
+
+        job.id()
+    }
+
+    /// Cancels all jobs that are not currently executing
+    ///
+    /// Queued jobs are removed from the execution queue, and inactive jobs
+    /// are marked as cancelled in the sotrage
+    ///
+    /// Currenly executing jobs are not affected by this operation
+    pub fn cancel_inactive(&self) {
+        self.queue.clear_queued();
+        self.storage.cancel_inactive();
+    }
+
+    /// Attempts to cancel a job by its ID
+    ///
+    /// If the job is currently executing, its cancellation token is
+    /// signalled. Otherwise, the dispatcher attempts to mark the job
+    /// as cancelled in the storage
+    pub fn cancel(&self, id: JobId) -> bool {
+        // If the task is already running, cancels it
+        if let Some(active) = self.queue.get_active(id) {
+            active.cancel();
+        }
+
+        // Sets the status to "cancelled" in the storage
+        self.storage.try_cancel(id)
+    }
+
     fn workers_loop(&self) -> Vec<JoinHandle<()>> {
         let mut handles = Vec::with_capacity(self.workers);
 
@@ -130,7 +223,6 @@ where
         handles
     }
 
-    // --- Schedule ---
     fn scheduler_loop(&self) -> JoinHandle<()> {
         let queue = self.queue.clone();
         let schedule = self.schedule.clone();
@@ -152,69 +244,15 @@ where
             }
         })
     }
-
-    pub fn schedule(&self, job: E, run_at: Instant) -> JobId {
-        let mut job = JobItem::new(
-            self.flake.get_id_as(),
-            JobType::Schedule {
-                scheduled_at: run_at,
-            },
-            job,
-        );
-        job.set_state(JobState::Scheduled);
-
-        self.storage.save(&job);
-        self.schedule.schedule(&job);
-
-        job.id()
-    }
-
-    pub fn schedule_interval(&self, job: E, run_at: Instant, interval: Duration) -> JobId {
-        let mut job = JobItem::new(
-            self.flake.get_id_as(),
-            JobType::Interval {
-                next_run_at: run_at,
-                interval,
-            },
-            job,
-        );
-        job.set_state(JobState::Scheduled);
-
-        self.storage.save(&job);
-        self.schedule.schedule(&job);
-
-        job.id()
-    }
-
-    // --- Queue ---
-    pub fn queue_add(&self, job: E) -> JobId {
-        let mut job = JobItem::new(self.flake.get_id_as(), JobType::Normal, job);
-        job.set_state(JobState::Queued);
-
-        self.storage.save(&job);
-        self.queue.enqueue(job.id());
-
-        job.id()
-    }
-
-    pub fn cancel_inactive(&self) {
-        self.queue.clear_queued();
-        self.storage.cancel_inactive();
-    }
-
-    // --- State ---
-    pub fn cancel(&self, id: JobId) -> bool {
-        // If the task is already running, cancels it
-        if let Some(active) = self.queue.get_active(id) {
-            active.cancel();
-        }
-
-        // Sets the status to "cancelled" in the storage
-        self.storage.try_cancel(id)
-    }
 }
 
-pub fn run<E>(dispatcher: &JobsDispatcher<E>) -> Vec<JoinHandle<()>>
+/// Starts the job dispatcher
+///
+/// Spawns one scheduler task and the configured number of worker tasks
+/// on the current [`tokio`] runtime
+///
+/// Returns the join handles of all spawned tasks
+pub fn run_dispatcher<E>(dispatcher: &JobsDispatcher<E>) -> Vec<JoinHandle<()>>
 where
     E: ExecutableJob + Clone + 'static,
 {
