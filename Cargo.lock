@@ -678,6 +678,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "imfield-jobs"
+version = "0.1.0"
+
+[[package]]
 name = "imfield-mimetype"
 version = "0.1.0"
 dependencies = [

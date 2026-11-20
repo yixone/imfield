@@ -5,7 +5,10 @@ members = [
     "crates/core/models",
     "crates/core/storage",
 
-    "crates/shared/event-bus", "crates/shared/jobs-core",
+    "crates/services/jobs",
+
+    "crates/shared/event-bus",
+    "crates/shared/jobs-core",
     "crates/shared/mimetype",
     "crates/shared/snowflake",
     "crates/shared/storage-address",
@@ -21,6 +24,8 @@ repository = "https://github.com/yixone/imfield"
 imfield-database.path = "crates/core/database"
 imfield-models.path = "crates/core/models"
 imfield-storage.path = "crates/core/storage"
+
+imfield-jobs.path = "crates/services/jobs"
 
 imfield-event-bus.path = "crates/shared/event-bus"
 imfield-mimetype.path = "crates/shared/mimetype"
