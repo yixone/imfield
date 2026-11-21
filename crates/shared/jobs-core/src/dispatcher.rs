@@ -194,13 +194,13 @@ where
                                 },
                                 Err(e) => {
                                     if job.retries() >= job.max_retries() {
-                                        job.set_state(JobState::Failed(e));
+                                        job.set_state(JobState::Failed(e.to_string()));
                                         storage.save(&job);
                                         continue;
                                     }
 
                                     let Some(delay) = job.retry_delay() else {
-                                        job.set_state(JobState::Failed(e));
+                                        job.set_state(JobState::Failed(e.to_string()));
                                         storage.save(&job);
                                         continue;
                                     };

@@ -11,5 +11,5 @@ imfield-models.workspace = true
 
 # --- Extern ---
 async-trait.workspace = true
-tokio = { workspace = true }
+tokio = { workspace = true, features = ["macros"] }
 tokio-util = { workspace = true }

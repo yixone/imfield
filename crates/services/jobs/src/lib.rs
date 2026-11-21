@@ -4,6 +4,13 @@ use imfield_jobs_core::ExecutableJob;
 use imfield_models::types::id::AssetId;
 use tokio_util::sync::CancellationToken;
 
+mod commands;
+mod utils;
+
+mod error;
+
+const MAX_RETRIES: u32 = 16;
+
 #[derive(Debug)]
 pub enum JobV1 {
     ProcessAsset { id: AssetId },
@@ -13,7 +20,7 @@ pub enum JobV1 {
 impl ExecutableJob for JobV1 {
     type Context = ();
 
-    type Error = ();
+    type Error = error::JobError;
 
     fn name(&self) -> &'static str {
         match self {
@@ -22,7 +29,7 @@ impl ExecutableJob for JobV1 {
     }
 
     fn max_retries(&self) -> u32 {
-        16
+        MAX_RETRIES
     }
 
     fn retry_delay(&self) -> Option<Duration> {

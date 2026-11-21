@@ -15,7 +15,7 @@ pub trait ExecutableJob: Send + Sync {
     /// The shared context required to execute this job
     type Context: Send + Sync + 'static;
     /// The error returned when job execution fails
-    type Error: Debug + Send + Sync + Clone;
+    type Error: std::error::Error + Send;
 
     /// Returns the static name identifying this job type
     ///
@@ -54,7 +54,7 @@ pub struct JobItem<E: ExecutableJob> {
     id: JobId,
     data: E,
     job_type: JobType,
-    state: JobState<E>,
+    state: JobState,
     retries: u32,
     retry_delay: Option<Duration>,
     created_at: i64,
@@ -125,11 +125,11 @@ where
         self.job_type = job_type;
     }
 
-    pub fn state(&self) -> &JobState<E> {
+    pub fn state(&self) -> &JobState {
         &self.state
     }
 
-    pub fn set_state(&mut self, state: JobState<E>) {
+    pub fn set_state(&mut self, state: JobState) {
         self.state = state;
     }
 }
@@ -151,14 +151,11 @@ pub enum JobType {
 
 /// Represents the current execution state of a job
 #[derive(Debug, Clone)]
-pub enum JobState<E>
-where
-    E: ExecutableJob,
-{
+pub enum JobState {
     Queued,
     Scheduled,
     Active,
-    Failed(E::Error),
+    Failed(String),
     Finished,
     Cancelled,
 }
