@@ -5,3 +5,11 @@ edition.workspace = true
 repository.workspace = true
 
 [dependencies]
+# --- Internal ---
+imfield-jobs-core.workspace = true
+imfield-models.workspace = true
+
+# --- Extern ---
+async-trait.workspace = true
+tokio = { workspace = true }
+tokio-util = { workspace = true }

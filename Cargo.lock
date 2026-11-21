@@ -680,6 +680,24 @@ dependencies = [
 [[package]]
 name = "imfield-jobs"
 version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "imfield-jobs-core",
+ "imfield-models",
+ "tokio",
+ "tokio-util",
+]
+
+[[package]]
+name = "imfield-jobs-core"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "imfield-snowflake",
+ "tokio",
+ "tokio-util",
+]
 
 [[package]]
 name = "imfield-mimetype"
@@ -757,17 +775,6 @@ name = "itoa"
 version = "1.0.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8f42a60cbdf9a97f5d2305f08a87dc4e09308d1276d28c869c684d7777685682"
-
-[[package]]
-name = "jobs-core"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "chrono",
- "imfield-snowflake",
- "tokio",
- "tokio-util",
-]
 
 [[package]]
 name = "js-sys"

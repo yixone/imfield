@@ -1,14 +1,38 @@
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
+use std::time::Duration;
+
+use imfield_jobs_core::ExecutableJob;
+use imfield_models::types::id::AssetId;
+use tokio_util::sync::CancellationToken;
+
+pub enum JobV1 {
+    ProcessAsset { id: AssetId },
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+#[async_trait::async_trait]
+impl ExecutableJob for JobV1 {
+    type Context = ();
 
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
+    type Error = ();
+
+    fn name(&self) -> &'static str {
+        match self {
+            JobV1::ProcessAsset { .. } => "job.asset.process",
+        }
+    }
+
+    fn max_retries(&self) -> u32 {
+        16
+    }
+
+    fn retry_delay(&self) -> Option<Duration> {
+        Some(Duration::from_mins(5))
+    }
+
+    async fn execute(
+        &self,
+        ctx: &Self::Context,
+        cancel: CancellationToken,
+    ) -> Result<(), Self::Error> {
+        todo!()
     }
 }
