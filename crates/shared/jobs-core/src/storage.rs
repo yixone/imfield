@@ -81,6 +81,15 @@ where
         true
     }
 
+    pub fn is_cancelled(&self, id: JobId) -> bool {
+        let lock = self.lock();
+        let Some(job) = lock.get(&id) else {
+            return false;
+        };
+
+        matches!(job.state(), JobState::Cancelled)
+    }
+
     pub fn delete(&self, id: JobId) -> Option<JobItem<E>> {
         let mut lock = self.lock();
         lock.remove(&id)

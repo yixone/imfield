@@ -164,10 +164,18 @@ where
                             let active = ActiveJob::new(job_id);
                             queue.add_active(active.clone());
 
-                            match job.execute(&ctx, active.cancel_token()).await {
-                                Ok(_) => {
-                                    queue.remove_active(job.id());
+                            let result = job.execute(&ctx, active.cancel_token()).await;
 
+                            queue.remove_active(job.id());
+
+                            // Handling a cancelled job
+                            if storage.is_cancelled(job.id()) {
+                                continue;
+                            }
+
+                            // Processing the result of a job execution
+                            match result {
+                                Ok(_) => {
                                     match job.job_type() {
                                         JobType::Normal | JobType::Schedule { .. } => {
                                             job.set_state(JobState::Finished);
@@ -185,8 +193,6 @@ where
                                     }
                                 },
                                 Err(e) => {
-                                    queue.remove_active(job.id());
-
                                     if job.retries() >= job.max_retries() {
                                         job.set_state(JobState::Failed(e));
                                         storage.save(&job);

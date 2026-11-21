@@ -4,6 +4,7 @@ use imfield_jobs_core::ExecutableJob;
 use imfield_models::types::id::AssetId;
 use tokio_util::sync::CancellationToken;
 
+#[derive(Debug)]
 pub enum JobV1 {
     ProcessAsset { id: AssetId },
 }
