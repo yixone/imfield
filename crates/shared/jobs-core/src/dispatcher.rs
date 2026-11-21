@@ -164,12 +164,15 @@ where
                             let active = ActiveJob::new(job_id);
                             queue.add_active(active.clone());
 
+                            // TODO: Add panic handling to the worker
                             let result = job.execute(&ctx, active.cancel_token()).await;
 
                             queue.remove_active(job.id());
 
                             // Handling a cancelled job
                             if storage.is_cancelled(job.id()) {
+                                // Cancellation after a job has already completed
+                                // no longer makes sense, so an atomic change is not required here
                                 continue;
                             }
 
