@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use crate::video::tool::{VideoToolError, bin::ExecutableBinary};
+use crate::video::tool::{VideoToolError, bin::ExecutableBinary, types::VideoMetadata};
 
 const FFPROBE_SYSTEM_PATH: &str = "ffprobe";
 
@@ -42,7 +42,10 @@ impl FFprobe {
         Ok(FFprobe { bin, version })
     }
 
-    pub async fn probe_meta(&self, path: impl Into<PathBuf>) {
+    pub async fn probe_meta(
+        &self,
+        path: impl Into<PathBuf>,
+    ) -> Result<VideoMetadata, VideoToolError> {
         todo!()
     }
 

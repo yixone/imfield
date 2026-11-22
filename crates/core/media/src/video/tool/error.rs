@@ -1,3 +1,5 @@
+// TODO: Rename to `VideoError`
+
 #[derive(Debug)]
 pub enum VideoToolError {
     BinUnavailable,
