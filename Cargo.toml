@@ -2,6 +2,7 @@
 resolver = "2"
 members = [
     "crates/core/database",
+    "crates/core/media",
     "crates/core/models",
     "crates/core/storage",
 
@@ -19,6 +20,7 @@ repository = "https://github.com/yixone/imfield"
 [workspace.dependencies]
 # --- Internal ---
 imfield-database.path = "crates/core/database"
+imfield-media.path = "crates/core/media"
 imfield-models.path = "crates/core/models"
 imfield-storage.path = "crates/core/storage"
 
@@ -34,12 +36,15 @@ base64 = "0.23.1"
 chrono = "0.4.42"
 futures = "0.3.32"
 hex = "0.4.3"
+image = { version = "0.25.10", default-features = false }
 rand = "0.10.1"
 serde = "1.0.219"
+serde_json = "1.0.154"
 sqlx = "0.8.5"
 tempfile = "3.27.0"
 tokio = "1.47.1"
 tokio-util = "0.7.16"
+webp = "0.3.1"
 
 # --- FFI ---
 libc = "0.2.189"

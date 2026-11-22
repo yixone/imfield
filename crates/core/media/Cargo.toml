@@ -1,0 +1,21 @@
+[package]
+name = "imfield-media"
+version = "0.1.0"
+edition.workspace = true
+repository.workspace = true
+
+[dependencies]
+# --- Internal ---
+imfield-models.workspace = true
+
+# --- Extern ---
+image = { workspace = true, features = ["rayon", "png", "jpeg", "webp", "gif"] }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+tokio = { workspace = true, features = [
+    "macros",
+    "process",
+    "fs",
+    "rt-multi-thread",
+] }
+webp = { workspace = true }
