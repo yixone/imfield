@@ -1,6 +1,9 @@
 use std::path::PathBuf;
 
-use crate::video::tool::{bin::ExecutableBinary, error::VideoToolError};
+use crate::video::tool::{
+    bin::{CommandExt, ExecutableBinary},
+    error::VideoToolError,
+};
 
 const FFMPEG_SYSTEM_PATH: &str = "ffmpeg";
 
@@ -23,16 +26,11 @@ impl FFmpeg {
         let mut command = bin.command();
         command.arg("-version");
 
-        // Check that the command is being executed
-        let Ok(out) = command.output().await else {
-            return Err(VideoToolError::BinUnavailable);
-        };
-        if !out.status.success() {
-            return Err(VideoToolError::BinUnavailable);
-        }
+        let out = command.execute_to_str().await.map_err(|e| match e {
+            VideoToolError::Io(..) => VideoToolError::BinUnavailable,
+            _ => e,
+        })?;
 
-        // Get the ffmpeg version
-        let out = String::from_utf8(out.stdout).map_err(|_| VideoToolError::StdoutDecodeFailed)?;
         let mut seg = out.split_whitespace();
         let version = match (seg.next(), seg.next(), seg.next()) {
             (Some("ffmpeg"), Some("version"), Some(version)) => version.to_string(),

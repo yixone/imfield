@@ -8,4 +8,11 @@ repository.workspace = true
 # --- Internal ---
 
 # --- Extern ---
-tokio = { workspace = true, features = ["macros", "process", "fs", "rt"] }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+tokio = { workspace = true, features = [
+    "macros",
+    "process",
+    "fs",
+    "rt-multi-thread",
+] }

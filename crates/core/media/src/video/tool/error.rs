@@ -3,7 +3,9 @@
 #[derive(Debug)]
 pub enum VideoToolError {
     BinUnavailable,
-    StdoutDecodeFailed,
+    OutputDecodeFailed,
+    MissingVideoStream,
+    Io(std::io::Error),
 }
 
 impl std::fmt::Display for VideoToolError {
@@ -12,4 +14,11 @@ impl std::fmt::Display for VideoToolError {
     }
 }
 
-impl std::error::Error for VideoToolError {}
+impl std::error::Error for VideoToolError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            VideoToolError::Io(error) => Some(error),
+            _ => None,
+        }
+    }
+}
