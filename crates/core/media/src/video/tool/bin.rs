@@ -2,7 +2,7 @@ use std::{path::PathBuf, process::Output};
 
 use tokio::process::Command;
 
-use crate::video::tool::VideoError;
+use crate::video::VideoError;
 
 /// Specifies the executable binary used by the application
 #[derive(Debug)]

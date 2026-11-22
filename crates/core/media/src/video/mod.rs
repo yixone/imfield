@@ -1,5 +1,8 @@
+mod error;
+
 mod tool;
 
+pub use error::VideoError;
 pub use tool::{FFmpeg, FFprobe};
 
 #[derive(Debug)]

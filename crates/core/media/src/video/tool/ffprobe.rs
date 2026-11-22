@@ -5,10 +5,12 @@ use std::{
 
 use serde::Deserialize;
 
-use crate::video::tool::{
+use crate::video::{
     VideoError,
-    bin::{CommandExt, ExecutableBinary},
-    types::{AudioStreamData, VideoMetadata, VideoStreamData},
+    tool::{
+        bin::{CommandExt, ExecutableBinary},
+        types::{AudioStreamData, VideoMetadata, VideoStreamData},
+    },
 };
 
 const FFPROBE_SYSTEM_PATH: &str = "ffprobe";

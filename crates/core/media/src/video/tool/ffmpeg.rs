@@ -1,8 +1,8 @@
 use std::path::PathBuf;
 
-use crate::video::tool::{
-    bin::{CommandExt, ExecutableBinary},
-    error::VideoError,
+use crate::video::{
+    VideoError,
+    tool::bin::{CommandExt, ExecutableBinary},
 };
 
 const FFMPEG_SYSTEM_PATH: &str = "ffmpeg";
