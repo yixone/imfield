@@ -6,6 +6,7 @@ members = [
     "crates/core/models",
     "crates/core/storage",
 
+    "crates/shared/event-bus", "crates/shared/jobs-core",
     "crates/shared/mimetype",
     "crates/shared/snowflake",
     "crates/shared/storage-address",
@@ -23,6 +24,7 @@ imfield-media.path = "crates/core/media"
 imfield-models.path = "crates/core/models"
 imfield-storage.path = "crates/core/storage"
 
+imfield-event-bus.path = "crates/shared/event-bus"
 imfield-mimetype.path = "crates/shared/mimetype"
 imfield-snowflake.path = "crates/shared/snowflake"
 imfield-storage-address.path = "crates/shared/storage-address"

@@ -8,5 +8,6 @@ pub mod types;
 pub mod utils;
 
 pub mod error;
+pub mod events;
 
 pub use error::DomainError;
