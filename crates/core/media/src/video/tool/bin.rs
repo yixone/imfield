@@ -2,7 +2,7 @@ use std::{path::PathBuf, process::Output};
 
 use tokio::process::Command;
 
-use crate::video::tool::VideoToolError;
+use crate::video::tool::VideoError;
 
 /// Specifies the executable binary used by the application
 #[derive(Debug)]
@@ -27,33 +27,32 @@ impl ExecutableBinary {
 
 #[allow(async_fn_in_trait)]
 pub(in crate::video) trait CommandExt {
-    async fn execute(&mut self) -> Result<Output, VideoToolError>;
+    async fn execute(&mut self) -> Result<Output, VideoError>;
 
-    async fn execute_to_str(&mut self) -> Result<String, VideoToolError>;
+    async fn execute_to_str(&mut self) -> Result<String, VideoError>;
 
-    async fn execute_to_buf(&mut self) -> Result<Vec<u8>, VideoToolError>;
+    async fn execute_to_buf(&mut self) -> Result<Vec<u8>, VideoError>;
 }
 
 impl CommandExt for Command {
-    async fn execute(&mut self) -> Result<Output, VideoToolError> {
-        let out = self.output().await.map_err(VideoToolError::Io)?;
+    async fn execute(&mut self) -> Result<Output, VideoError> {
+        let out = self.output().await.map_err(VideoError::Io)?;
 
         if !out.status.success() {
-            let err =
-                String::from_utf8(out.stderr).map_err(|_| VideoToolError::OutputDecodeFailed)?;
-            return Err(VideoToolError::Io(std::io::Error::other(err)));
+            let err = String::from_utf8(out.stderr).map_err(|_| VideoError::DecodeFailed)?;
+            return Err(VideoError::Io(std::io::Error::other(err)));
         }
 
         Ok(out)
     }
 
-    async fn execute_to_buf(&mut self) -> Result<Vec<u8>, VideoToolError> {
+    async fn execute_to_buf(&mut self) -> Result<Vec<u8>, VideoError> {
         let out = self.execute().await?;
         Ok(out.stdout)
     }
 
-    async fn execute_to_str(&mut self) -> Result<String, VideoToolError> {
+    async fn execute_to_str(&mut self) -> Result<String, VideoError> {
         let out = self.execute_to_buf().await?;
-        String::from_utf8(out).map_err(|_| VideoToolError::OutputDecodeFailed)
+        String::from_utf8(out).map_err(|_| VideoError::DecodeFailed)
     }
 }

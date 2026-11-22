@@ -7,4 +7,4 @@ mod types;
 pub use ffmpeg::FFmpeg;
 pub use ffprobe::FFprobe;
 
-pub use error::VideoToolError;
+pub use error::VideoError;

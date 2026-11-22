@@ -6,7 +6,7 @@ use std::{
 use serde::Deserialize;
 
 use crate::video::tool::{
-    VideoToolError,
+    VideoError,
     bin::{CommandExt, ExecutableBinary},
     types::{AudioStreamData, VideoMetadata, VideoStreamData},
 };
@@ -20,36 +20,39 @@ pub struct FFprobe {
 }
 
 impl FFprobe {
-    pub async fn try_new() -> Result<Self, VideoToolError> {
+    pub async fn try_new() -> Result<Self, VideoError> {
         FFprobe::from_bin(ExecutableBinary::SystemPath(FFPROBE_SYSTEM_PATH.into())).await
     }
 
-    pub async fn try_new_file(path: impl Into<PathBuf>) -> Result<Self, VideoToolError> {
+    pub async fn try_new_file(path: impl Into<PathBuf>) -> Result<Self, VideoError> {
         FFprobe::from_bin(ExecutableBinary::File(path.into())).await
     }
 
-    async fn from_bin(bin: ExecutableBinary) -> Result<Self, VideoToolError> {
+    async fn from_bin(bin: ExecutableBinary) -> Result<Self, VideoError> {
         let mut command = bin.command();
         command.arg("-version");
 
         let out = command.execute_to_str().await.map_err(|e| match e {
-            VideoToolError::Io(..) => VideoToolError::BinUnavailable,
+            VideoError::Io(..) => VideoError::BinUnavailable,
             _ => e,
         })?;
 
         let mut seg = out.split_whitespace();
         let version = match (seg.next(), seg.next(), seg.next()) {
             (Some("ffprobe"), Some("version"), Some(version)) => version.to_string(),
-            _ => return Err(VideoToolError::BinUnavailable),
+            _ => return Err(VideoError::BinUnavailable),
         };
 
         Ok(FFprobe { bin, version })
     }
 
-    pub async fn probe_meta(
-        &self,
-        path: impl AsRef<Path>,
-    ) -> Result<VideoMetadata, VideoToolError> {
+    pub async fn probe_meta(&self, path: impl AsRef<Path>) -> Result<VideoMetadata, VideoError> {
+        // Check if the file exists
+        let path = path.as_ref();
+        if !tokio::fs::try_exists(&path).await.map_err(VideoError::Io)? {
+            return Err(VideoError::FileNotFound);
+        }
+
         // Construct a command to read metadata
         let mut command = self.bin.command();
         command.arg("-hide_banner");
@@ -62,12 +65,12 @@ impl FFprobe {
         command.args(["-of", "json"]);
 
         command.arg("-i");
-        command.arg(path.as_ref());
+        command.arg(path);
 
         // Execute the command and read the output in JSON format
         let out = command.execute_to_buf().await?;
-        let json = serde_json::from_slice::<ProbedDataJson>(&out)
-            .map_err(|_| VideoToolError::OutputDecodeFailed)?;
+        let json =
+            serde_json::from_slice::<ProbedDataJson>(&out).map_err(VideoError::DeserializeError)?;
 
         let streams = json.streams;
 
@@ -75,7 +78,7 @@ impl FFprobe {
         let vs_json = streams
             .iter()
             .find(|d| d.is_video())
-            .ok_or(VideoToolError::MissingVideoStream)?;
+            .ok_or(VideoError::MissingStream)?;
         let video = VideoStreamData {
             codec: vs_json.codec_name.to_string().into(),
             dimension: vs_json.dimension()?,
@@ -121,44 +124,40 @@ impl StreamDataJson {
         &self.codec_type == "audio"
     }
 
-    pub fn dimension(&self) -> Result<(u32, u32), VideoToolError> {
+    pub fn dimension(&self) -> Result<(u32, u32), VideoError> {
         Ok((
-            self.width.ok_or(VideoToolError::OutputDecodeFailed)?,
-            self.height.ok_or(VideoToolError::OutputDecodeFailed)?,
+            self.width.ok_or(VideoError::MissingMetadata)?,
+            self.height.ok_or(VideoError::MissingMetadata)?,
         ))
     }
 
-    pub fn fps(&self) -> Result<f64, VideoToolError> {
+    pub fn fps(&self) -> Result<f64, VideoError> {
         let Some(frame_rate) = &self.avg_frame_rate else {
-            return Err(VideoToolError::OutputDecodeFailed);
+            return Err(VideoError::MissingMetadata);
         };
 
         let Some((num, denom)) = frame_rate.split_once('/') else {
-            return Err(VideoToolError::OutputDecodeFailed);
+            return Err(VideoError::DecodeFailed);
         };
 
-        let num = num
-            .parse::<f64>()
-            .map_err(|_| VideoToolError::OutputDecodeFailed)?;
-        let den = denom
-            .parse::<f64>()
-            .map_err(|_| VideoToolError::OutputDecodeFailed)?;
+        let num = num.parse::<f64>().map_err(|_| VideoError::DecodeFailed)?;
+        let den = denom.parse::<f64>().map_err(|_| VideoError::DecodeFailed)?;
 
         if num.is_infinite() || den.is_infinite() || den <= 0.0 {
-            return Err(VideoToolError::OutputDecodeFailed);
+            return Err(VideoError::DecodeFailed);
         }
 
         Ok(num / den)
     }
 
-    pub fn duration(&self) -> Result<Duration, VideoToolError> {
+    pub fn duration(&self) -> Result<Duration, VideoError> {
         let duration_secs = self
             .duration
             .parse::<f32>()
-            .map_err(|_| VideoToolError::OutputDecodeFailed)?;
+            .map_err(|_| VideoError::DecodeFailed)?;
 
         if duration_secs.is_infinite() || duration_secs < 0.0 {
-            return Err(VideoToolError::OutputDecodeFailed);
+            return Err(VideoError::DecodeFailed);
         }
 
         Ok(Duration::from_secs_f32(duration_secs))
