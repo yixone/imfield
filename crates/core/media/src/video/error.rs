@@ -7,6 +7,7 @@ pub enum VideoError {
     DecodeFailed,
 
     FileNotFound,
+    FileAlreadyExists,
 
     DeserializeError(serde_json::Error),
     Io(std::io::Error),
@@ -24,5 +25,17 @@ impl std::error::Error for VideoError {
             VideoError::Io(error) => Some(error),
             _ => None,
         }
+    }
+}
+
+impl From<serde_json::Error> for VideoError {
+    fn from(err: serde_json::Error) -> Self {
+        VideoError::DeserializeError(err)
+    }
+}
+
+impl From<std::io::Error> for VideoError {
+    fn from(err: std::io::Error) -> Self {
+        VideoError::Io(err)
     }
 }

@@ -7,17 +7,16 @@ use serde::Deserialize;
 
 use crate::video::{
     VideoError,
-    tool::{
-        bin::{CommandExt, ExecutableBinary},
-        types::{AudioStreamData, VideoMetadata, VideoStreamData},
-    },
+    execution::{CommandExt, ExecutableBinary},
+    types::{AudioStreamData, VideoMetadata, VideoStreamData},
 };
 
 const FFPROBE_SYSTEM_PATH: &str = "ffprobe";
 
 /// Wrapper around the FFprobe executable
 ///
-/// `FFprobe` provide access to media metadata through the FFprobe CLI.
+/// `FFprobe` provide access to video file metadata
+///
 /// The executable can be resolved through the system `PATH` or
 /// specified explicitly
 #[derive(Debug)]
@@ -36,24 +35,6 @@ impl FFprobe {
     /// Creates an FFprobe instance using an executable at the specified path
     pub async fn try_new_file(path: impl Into<PathBuf>) -> Result<Self, VideoError> {
         FFprobe::from_bin(ExecutableBinary::File(path.into())).await
-    }
-
-    async fn from_bin(bin: ExecutableBinary) -> Result<Self, VideoError> {
-        let mut command = bin.command();
-        command.arg("-version");
-
-        let out = command.execute_to_str().await.map_err(|e| match e {
-            VideoError::Io(..) => VideoError::BinUnavailable,
-            _ => e,
-        })?;
-
-        let mut seg = out.split_whitespace();
-        let version = match (seg.next(), seg.next(), seg.next()) {
-            (Some("ffprobe"), Some("version"), Some(version)) => version.to_string(),
-            _ => return Err(VideoError::BinUnavailable),
-        };
-
-        Ok(FFprobe { bin, version })
     }
 
     /// Extract metadata from a video file
@@ -111,6 +92,24 @@ impl FFprobe {
     /// Returns the version of the FFprobe executable
     pub fn version(&self) -> &str {
         &self.version
+    }
+
+    async fn from_bin(bin: ExecutableBinary) -> Result<Self, VideoError> {
+        let mut command = bin.command();
+        command.arg("-version");
+
+        let out = command.execute_to_str().await.map_err(|e| match e {
+            VideoError::Io(..) => VideoError::BinUnavailable,
+            _ => e,
+        })?;
+
+        let mut seg = out.split_whitespace();
+        let version = match (seg.next(), seg.next(), seg.next()) {
+            (Some("ffprobe"), Some("version"), Some(version)) => version.to_string(),
+            _ => return Err(VideoError::BinUnavailable),
+        };
+
+        Ok(FFprobe { bin, version })
     }
 }
 

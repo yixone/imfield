@@ -1,9 +1,13 @@
 mod error;
 
-mod tool;
+mod execution;
+mod ffmpeg;
+mod ffprobe;
+mod types;
 
 pub use error::VideoError;
-pub use tool::{FFmpeg, FFprobe};
+pub use ffmpeg::{AudioMode, ExtractVideoFragmentParams, FFmpeg, ResizeMode};
+pub use ffprobe::FFprobe;
 
 #[derive(Debug)]
 pub struct VideoProcessor {

@@ -6,8 +6,10 @@ repository.workspace = true
 
 [dependencies]
 # --- Internal ---
+imfield-models.workspace = true
 
 # --- Extern ---
+image = { workspace = true, features = ["rayon", "png", "jpeg", "webp", "gif"] }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 tokio = { workspace = true, features = [
@@ -16,3 +18,4 @@ tokio = { workspace = true, features = [
     "fs",
     "rt-multi-thread",
 ] }
+webp = { workspace = true }
