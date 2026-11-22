@@ -1,2 +1,2 @@
-mod ffmpeg;
-mod image;
+pub mod image;
+pub mod video;
