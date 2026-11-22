@@ -13,6 +13,11 @@ use crate::video::tool::{
 
 const FFPROBE_SYSTEM_PATH: &str = "ffprobe";
 
+/// Wrapper around the FFprobe executable
+///
+/// `FFprobe` provide access to media metadata through the FFprobe CLI.
+/// The executable can be resolved through the system `PATH` or
+/// specified explicitly
 #[derive(Debug)]
 pub struct FFprobe {
     bin: ExecutableBinary,
@@ -20,10 +25,13 @@ pub struct FFprobe {
 }
 
 impl FFprobe {
+    /// Creates an FFprobe instance using the executable resolved through the
+    /// system `PATH`
     pub async fn try_new() -> Result<Self, VideoError> {
         FFprobe::from_bin(ExecutableBinary::SystemPath(FFPROBE_SYSTEM_PATH.into())).await
     }
 
+    /// Creates an FFprobe instance using an executable at the specified path
     pub async fn try_new_file(path: impl Into<PathBuf>) -> Result<Self, VideoError> {
         FFprobe::from_bin(ExecutableBinary::File(path.into())).await
     }
@@ -46,6 +54,9 @@ impl FFprobe {
         Ok(FFprobe { bin, version })
     }
 
+    /// Extract metadata from a video file
+    ///
+    /// Retrieves information about the first video stream and, if present, the first audio stream
     pub async fn probe_meta(&self, path: impl AsRef<Path>) -> Result<VideoMetadata, VideoError> {
         // Check if the file exists
         let path = path.as_ref();
@@ -95,6 +106,7 @@ impl FFprobe {
         Ok(VideoMetadata { video, audio })
     }
 
+    /// Returns the version of the FFprobe executable
     pub fn version(&self) -> &str {
         &self.version
     }
@@ -116,22 +128,22 @@ struct StreamDataJson {
 }
 
 impl StreamDataJson {
-    pub fn is_video(&self) -> bool {
+    fn is_video(&self) -> bool {
         &self.codec_type == "video"
     }
 
-    pub fn is_audio(&self) -> bool {
+    fn is_audio(&self) -> bool {
         &self.codec_type == "audio"
     }
 
-    pub fn dimension(&self) -> Result<(u32, u32), VideoError> {
+    fn dimension(&self) -> Result<(u32, u32), VideoError> {
         Ok((
             self.width.ok_or(VideoError::MissingMetadata)?,
             self.height.ok_or(VideoError::MissingMetadata)?,
         ))
     }
 
-    pub fn fps(&self) -> Result<f64, VideoError> {
+    fn fps(&self) -> Result<f64, VideoError> {
         let Some(frame_rate) = &self.avg_frame_rate else {
             return Err(VideoError::MissingMetadata);
         };
@@ -143,20 +155,20 @@ impl StreamDataJson {
         let num = num.parse::<f64>().map_err(|_| VideoError::DecodeFailed)?;
         let den = denom.parse::<f64>().map_err(|_| VideoError::DecodeFailed)?;
 
-        if num.is_infinite() || den.is_infinite() || den <= 0.0 {
+        if !num.is_finite() || !den.is_finite() || den <= 0.0 {
             return Err(VideoError::DecodeFailed);
         }
 
         Ok(num / den)
     }
 
-    pub fn duration(&self) -> Result<Duration, VideoError> {
+    fn duration(&self) -> Result<Duration, VideoError> {
         let duration_secs = self
             .duration
             .parse::<f32>()
             .map_err(|_| VideoError::DecodeFailed)?;
 
-        if duration_secs.is_infinite() || duration_secs < 0.0 {
+        if !duration_secs.is_finite() || duration_secs < 0.0 {
             return Err(VideoError::DecodeFailed);
         }
 
