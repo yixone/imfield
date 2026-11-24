@@ -66,9 +66,6 @@ pub(crate) fn a_hash(b: [[u8; 8]; 8]) -> PerceptualHash {
 
 /// Generates a ThumbHash representation of an RGBA image
 pub(crate) fn thumbhash(rgba: &[Rgba<u8>], w: usize, h: usize) -> ThumbHash {
-    // Original algorithm:
-    // https://github.com/evanw/thumbhash/blob/main/rust/src/lib.rs
-
     // Determine the average color
     let mut avg_r = 0.0;
     let mut avg_g = 0.0;
