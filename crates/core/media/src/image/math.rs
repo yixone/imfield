@@ -6,8 +6,8 @@ use std::f32::consts::PI;
 
 /// Computes the 2D DCT-II
 ///
-/// Returns the unnormalized DCT coefficents.
-/// The output contains `nx * ny` coefficents
+/// Returns the unnormalized DCT coefficients.
+/// The output contains `nx * ny` coefficients
 pub(crate) fn dct2(b: &[f32], w: usize, h: usize, nx: usize, ny: usize) -> Vec<f32> {
     let mut dct = Vec::with_capacity(nx * ny);
 
@@ -37,7 +37,7 @@ pub(crate) fn dct2(b: &[f32], w: usize, h: usize, nx: usize, ny: usize) -> Vec<f
 
 /// Computes the orthonormal 2D DCT-II
 ///
-/// Applies orthonormal normalization to the coefficents returned by [`dct2`]
+/// Applies orthonormal normalization to the coefficients returned by [`dct2`]
 pub(crate) fn dct2_ortho(b: &[f32], w: usize, h: usize, nx: usize, ny: usize) -> Vec<f32> {
     let mut dct = dct2(b, w, h, nx, ny);
 
@@ -53,7 +53,7 @@ pub(crate) fn dct2_ortho(b: &[f32], w: usize, h: usize, nx: usize, ny: usize) ->
     dct
 }
 
-///
+/// Computes and scales the low-frequency coefficients used by ThumbHash
 pub(crate) fn dct2_thumbhash(
     b: &[f32],
     w: usize,
