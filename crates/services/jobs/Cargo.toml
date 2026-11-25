@@ -1,0 +1,15 @@
+[package]
+name = "imfield-jobs"
+version = "0.1.0"
+edition.workspace = true
+repository.workspace = true
+
+[dependencies]
+# --- Internal ---
+imfield-jobs-core.workspace = true
+imfield-models.workspace = true
+
+# --- Extern ---
+async-trait.workspace = true
+tokio = { workspace = true, features = ["macros"] }
+tokio-util = { workspace = true }

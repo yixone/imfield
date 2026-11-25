@@ -1,5 +1,5 @@
 [package]
-name = "jobs-core"
+name = "imfield-jobs-core"
 version = "0.1.0"
 edition.workspace = true
 repository.workspace = true

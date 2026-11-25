@@ -164,10 +164,21 @@ where
                             let active = ActiveJob::new(job_id);
                             queue.add_active(active.clone());
 
-                            match job.execute(&ctx, active.cancel_token()).await {
-                                Ok(_) => {
-                                    queue.remove_active(job.id());
+                            // TODO: Add panic handling to the worker
+                            let result = job.execute(&ctx, active.cancel_token()).await;
 
+                            queue.remove_active(job.id());
+
+                            // Handling a cancelled job
+                            if storage.is_cancelled(job.id()) {
+                                // Cancellation after a job has already completed
+                                // no longer makes sense, so an atomic change is not required here
+                                continue;
+                            }
+
+                            // Processing the result of a job execution
+                            match result {
+                                Ok(_) => {
                                     match job.job_type() {
                                         JobType::Normal | JobType::Schedule { .. } => {
                                             job.set_state(JobState::Finished);
@@ -185,16 +196,14 @@ where
                                     }
                                 },
                                 Err(e) => {
-                                    queue.remove_active(job.id());
-
                                     if job.retries() >= job.max_retries() {
-                                        job.set_state(JobState::Failed(e));
+                                        job.set_state(JobState::Failed(e.to_string()));
                                         storage.save(&job);
                                         continue;
                                     }
 
                                     let Some(delay) = job.retry_delay() else {
-                                        job.set_state(JobState::Failed(e));
+                                        job.set_state(JobState::Failed(e.to_string()));
                                         storage.save(&job);
                                         continue;
                                     };
