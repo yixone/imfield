@@ -1,5 +1,8 @@
 #[derive(Debug)]
 pub enum ImageError {
+    InvalidDimension,
+    DimensionLimitExceeded,
+
     Io(std::io::Error),
     BackendError(image::ImageError),
 }
