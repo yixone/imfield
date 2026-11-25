@@ -1,7 +1,7 @@
 use std::io::Cursor;
 
 use image::{DynamicImage, GenericImageView, ImageReader, Pixel};
-use imfield_models::types::media::{Color, PerceptualHash, ThumbHash};
+use imfield_models::types::media::{Color, ImageHash, ThumbHash};
 use tokio::io::{AsyncRead, AsyncReadExt};
 
 use crate::image::{
@@ -107,13 +107,13 @@ impl Image {
     }
 
     /// Calculates the average hash (aHash) of the image
-    pub fn a_hash(&self) -> Result<PerceptualHash, ImageError> {
+    pub fn a_hash(&self) -> Result<ImageHash, ImageError> {
         let pixels = self.prepare_luma_matrix()?;
         Ok(a_hash(pixels))
     }
 
     /// Calculates the perceptual hash (pHash) of the image
-    pub fn p_hash(&self) -> Result<PerceptualHash, ImageError> {
+    pub fn p_hash(&self) -> Result<ImageHash, ImageError> {
         let pixels = self.prepare_luma_matrix()?;
         Ok(p_hash(pixels))
     }

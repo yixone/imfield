@@ -1,10 +1,10 @@
 use image::Rgba;
-use imfield_models::types::media::{PerceptualHash, ThumbHash};
+use imfield_models::types::media::{ImageHash, ThumbHash};
 
 use crate::image::math::{dct2_ortho, dct2_thumbhash};
 
 /// Computes a perceptual hash using the DCT-based pHash algorithm
-pub(crate) fn p_hash(b: [[u8; 32]; 32]) -> PerceptualHash {
+pub(crate) fn p_hash(b: [[u8; 32]; 32]) -> ImageHash {
     // Apply DCT to input
     let dct = dct2_ortho(
         &b.as_flattened()
@@ -42,11 +42,11 @@ pub(crate) fn p_hash(b: [[u8; 32]; 32]) -> PerceptualHash {
         }
     }
 
-    PerceptualHash::new(hash)
+    ImageHash::new(hash)
 }
 
 /// Computes an average hash using the aHash algorithm
-pub(crate) fn a_hash(b: [[u8; 8]; 8]) -> PerceptualHash {
+pub(crate) fn a_hash(b: [[u8; 8]; 8]) -> ImageHash {
     // Find the average value
     let pixels = b.as_flattened();
     let avg = pixels.iter().map(|p| *p as u32).sum::<u32>() / pixels.len() as u32;
@@ -61,7 +61,7 @@ pub(crate) fn a_hash(b: [[u8; 8]; 8]) -> PerceptualHash {
         }
     }
 
-    PerceptualHash::new(hash)
+    ImageHash::new(hash)
 }
 
 /// Generates a ThumbHash representation of an RGBA image
