@@ -27,15 +27,15 @@ impl Color {
     }
 }
 
-/// A perceptual hash that is used for visual comparison of media
+/// An image hash that is used for visual comparison
 #[derive(Debug, Clone, Copy, PartialEq)]
 #[cfg_attr(feature = "sqlx", derive(sqlx::Type), sqlx(transparent))]
-pub struct PerceptualHash(pub(crate) i64);
+pub struct ImageHash(pub(crate) i64);
 
-impl PerceptualHash {
-    /// Creates a new [`PerceptualHash`]
+impl ImageHash {
+    /// Creates a new [`ImageHash`]
     pub fn new(hash: i64) -> Self {
-        PerceptualHash(hash)
+        ImageHash(hash)
     }
 
     /// Returns the internal value of the hash

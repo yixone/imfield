@@ -5,7 +5,7 @@ use crate::{
     entities::{File, file::FileResource},
     types::{
         id::{AssetId, FileId},
-        media::{Color, PerceptualHash, ThumbHash},
+        media::{Color, ImageHash, ThumbHash},
     },
 };
 
@@ -187,8 +187,8 @@ pub struct AssetDbEntry {
     pub updated_at: Option<DateTime<Utc>>,
     pub deleted_at: Option<DateTime<Utc>>,
     pub features_updated_at: Option<DateTime<Utc>>,
-    pub p_hash: Option<PerceptualHash>,
-    pub a_hash: Option<PerceptualHash>,
+    pub p_hash: Option<ImageHash>,
+    pub a_hash: Option<ImageHash>,
 }
 
 impl Asset {
@@ -505,30 +505,30 @@ pub struct AssetSimilarityFeatures {
     /// Timestamp of the most recent features update, if any
     pub(crate) updated_at: Option<DateTime<Utc>>,
     /// Perceptual hash of the asset, if available
-    pub(crate) p_hash: Option<PerceptualHash>,
+    pub(crate) p_hash: Option<ImageHash>,
     /// Average hash of the asset, if available
-    pub(crate) a_hash: Option<PerceptualHash>,
+    pub(crate) a_hash: Option<ImageHash>,
 }
 
 impl AssetSimilarityFeatures {
     /// Returns the asset's perceptual hash, if available
-    pub fn p_hash(&self) -> Option<PerceptualHash> {
+    pub fn p_hash(&self) -> Option<ImageHash> {
         self.p_hash
     }
 
     /// Sets the asset's perceptual hash
-    pub fn set_p_hash(&mut self, p_hash: PerceptualHash) {
+    pub fn set_p_hash(&mut self, p_hash: ImageHash) {
         self.p_hash = Some(p_hash);
         self.refresh_updated_at();
     }
 
     /// Returns the asset's average hash, if available
-    pub fn a_hash(&self) -> Option<PerceptualHash> {
+    pub fn a_hash(&self) -> Option<ImageHash> {
         self.a_hash
     }
 
     /// Sets the asset's average hash
-    pub fn set_a_hash(&mut self, a_hash: PerceptualHash) {
+    pub fn set_a_hash(&mut self, a_hash: ImageHash) {
         self.a_hash = Some(a_hash);
         self.refresh_updated_at();
     }

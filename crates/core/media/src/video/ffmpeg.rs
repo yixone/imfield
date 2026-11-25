@@ -1,5 +1,4 @@
 use std::{
-    io::Cursor,
     path::{Path, PathBuf},
     time::Duration,
 };
@@ -38,12 +37,12 @@ impl FFmpeg {
 
     /// Extracts a frame from a video at the specified timestamp
     ///
-    /// The resulting frame is encoded as JPEG and returned as an image reader
+    /// The resulting frame is encoded as JPEG and returned as a buffer
     pub async fn read_frame(
         &self,
         path: impl AsRef<Path>,
         frame_time: Duration,
-    ) -> Result<image::ImageReader<Cursor<Vec<u8>>>, VideoError> {
+    ) -> Result<Vec<u8>, VideoError> {
         let mut command = self.bin.command();
 
         command.arg("-i");
@@ -57,7 +56,7 @@ impl FFmpeg {
 
         let buf = command.execute_to_buf().await?;
 
-        Ok(image::ImageReader::new(Cursor::new(buf)))
+        Ok(buf)
     }
 
     /// Extracts a video fragment and saves it to the specified output path

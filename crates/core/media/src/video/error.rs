@@ -22,7 +22,7 @@ impl std::fmt::Display for VideoError {
 impl std::error::Error for VideoError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
-            VideoError::Io(error) => Some(error),
+            VideoError::Io(err) => Some(err),
             _ => None,
         }
     }

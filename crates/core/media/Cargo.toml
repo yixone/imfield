@@ -16,6 +16,7 @@ tokio = { workspace = true, features = [
     "macros",
     "process",
     "fs",
+    "io-util",
     "rt-multi-thread",
 ] }
 webp = { workspace = true }

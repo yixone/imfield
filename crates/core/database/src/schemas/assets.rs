@@ -10,7 +10,7 @@ use imfield_models::{
     },
     types::{
         id::{AssetId, FileId},
-        media::{Color, PerceptualHash, ThumbHash},
+        media::{Color, ImageHash, ThumbHash},
     },
 };
 use sqlx::prelude::FromRow;
@@ -40,8 +40,8 @@ pub struct AssetRow {
 pub struct AssetSimilarityFeaturesRow {
     pub id: AssetId,
     pub updated_at: Option<DateTime<Utc>>,
-    pub p_hash: Option<PerceptualHash>,
-    pub a_hash: Option<PerceptualHash>,
+    pub p_hash: Option<ImageHash>,
+    pub a_hash: Option<ImageHash>,
 }
 
 /// Maps asset database rows to domain entities and resource models
