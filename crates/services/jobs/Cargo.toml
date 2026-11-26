@@ -6,8 +6,14 @@ repository.workspace = true
 
 [dependencies]
 # --- Internal ---
+imfield-database.workspace = true
 imfield-jobs-core.workspace = true
 imfield-models.workspace = true
+imfield-storage.workspace = true
+imfield-di.workspace = true
+imfield-mimetype.workspace = true
+imfield-media.workspace = true
+imfield-storage-address.workspace = true
 
 # --- Extern ---
 async-trait.workspace = true

@@ -6,6 +6,7 @@ members = [
     "crates/core/models",
     "crates/core/storage",
 
+    "crates/services/di",
     "crates/services/jobs",
 
     "crates/shared/event-bus",
@@ -27,6 +28,7 @@ imfield-media.path = "crates/core/media"
 imfield-models.path = "crates/core/models"
 imfield-storage.path = "crates/core/storage"
 
+imfield-di.path = "crates/services/di"
 imfield-jobs.path = "crates/services/jobs"
 
 imfield-event-bus.path = "crates/shared/event-bus"
@@ -39,6 +41,7 @@ imfield-utils.path = "crates/shared/utils"
 # --- Extern ---
 async-trait = "0.1.89"
 base64 = "0.23.1"
+bytes = "1.11.1"
 chrono = "0.4.42"
 futures = "0.3.32"
 hex = "0.4.3"

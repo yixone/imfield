@@ -86,6 +86,25 @@ pub trait AssetsDatabaseExt: AssetsDatabase {
         self.update_fn_boxed(id, Box::new(f)).await
     }
 
+    async fn try_start_processing(&self, id: AssetId) -> Result<Option<Asset>, DatabaseError> {
+        let res = self
+            .update_fn(id, move |a| {
+                if matches!(a.state(), AssetState::Processing) {
+                    return Err(DomainError::BusyState);
+                }
+
+                a.set_state(AssetState::Processing);
+                Ok(())
+            })
+            .await;
+
+        match res {
+            Ok(r) => Ok(Some(r)),
+            Err(DatabaseError::Domain(DomainError::BusyState)) => Ok(None),
+            Err(e) => Err(e),
+        }
+    }
+
     async fn update_state(&self, id: AssetId, state: AssetState) -> Result<Asset, DatabaseError> {
         self.update_fn(id, move |a| {
             a.set_state(state);
@@ -102,4 +121,4 @@ pub trait AssetsDatabaseExt: AssetsDatabase {
     }
 }
 
-impl<T> AssetsDatabaseExt for T where T: AssetsDatabase {}
+impl AssetsDatabaseExt for dyn AssetsDatabase + '_ {}

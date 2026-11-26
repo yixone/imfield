@@ -9,6 +9,7 @@ repository.workspace = true
 imfield-models.workspace = true
 
 # --- Extern ---
+bytes = { workspace = true }
 image = { workspace = true, features = ["rayon", "png", "jpeg", "webp", "gif"] }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }

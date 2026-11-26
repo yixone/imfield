@@ -7,4 +7,5 @@ mod hash;
 mod math;
 
 pub use error::ImageError;
-pub use img::Image;
+pub use img::{EncodedImageReader, Image};
+pub use types::{ImageFormat, ResizeFilter};

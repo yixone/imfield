@@ -96,4 +96,4 @@ pub trait FilesDatabaseExt: FilesDatabase {
     }
 }
 
-impl<T> FilesDatabaseExt for T where T: FilesDatabase {}
+impl FilesDatabaseExt for dyn FilesDatabase + '_ {}

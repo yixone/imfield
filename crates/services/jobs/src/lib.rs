@@ -1,6 +1,8 @@
-use std::time::Duration;
+use std::{sync::Arc, time::Duration};
 
+use imfield_di::DataContext;
 use imfield_jobs_core::ExecutableJob;
+use imfield_media::video::{FFmpeg, FFprobe};
 use imfield_models::types::id::AssetId;
 use tokio_util::sync::CancellationToken;
 
@@ -18,7 +20,7 @@ pub enum JobV1 {
 
 #[async_trait::async_trait]
 impl ExecutableJob for JobV1 {
-    type Context = ();
+    type Context = JobContext;
 
     type Error = error::JobError;
 
@@ -41,6 +43,18 @@ impl ExecutableJob for JobV1 {
         ctx: &Self::Context,
         cancel: CancellationToken,
     ) -> Result<(), Self::Error> {
-        todo!()
+        match self {
+            JobV1::ProcessAsset { id } => commands::process_asset(*id, ctx, cancel).await,
+        }
     }
+}
+
+pub struct VideoContext {
+    pub ffmpeg: FFmpeg,
+    pub ffprobe: FFprobe,
+}
+
+pub struct JobContext {
+    pub video: Option<Arc<VideoContext>>,
+    pub data: Arc<DataContext>,
 }

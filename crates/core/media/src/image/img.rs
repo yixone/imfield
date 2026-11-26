@@ -1,13 +1,14 @@
-use std::io::Cursor;
+use std::{collections::VecDeque, io::Cursor};
 
+use bytes::Bytes;
 use image::{DynamicImage, GenericImageView, ImageReader, Pixel};
 use imfield_models::types::media::{Color, ImageHash, ThumbHash};
-use tokio::io::{AsyncRead, AsyncReadExt};
+use tokio::io::{AsyncRead, AsyncReadExt, BufReader};
 
 use crate::image::{
     ImageError,
     hash::{a_hash, p_hash, thumbhash},
-    types::ResizeFilter,
+    types::{ImageFormat, ResizeFilter},
 };
 
 /// Maximum allowed width or height of a decoded image, in pixels
@@ -126,6 +127,31 @@ impl Image {
         Color::from_rgb(r, g, b)
     }
 
+    pub fn into_reader(self, format: ImageFormat) -> Result<EncodedImageReader, ImageError> {
+        let mut buf = Vec::new();
+
+        match format {
+            ImageFormat::Png | ImageFormat::Jpeg => {
+                self.inner.write_to(Cursor::new(&mut buf), format.into())?;
+            }
+            ImageFormat::WebP(q) => {
+                let encoder = match webp::Encoder::from_image(&self.inner) {
+                    Ok(e) => e,
+                    Err(_) => {
+                        return Err(ImageError::WebpEncoderError);
+                    }
+                };
+
+                let webp = encoder.encode(q as f32);
+                buf.extend(&*webp);
+            }
+        }
+
+        let chunks = buf.chunks(1024 * 128).map(Bytes::copy_from_slice).collect();
+
+        Ok(EncodedImageReader(chunks))
+    }
+
     fn prepare_luma_matrix<T, K>(&self) -> Result<T, ImageError>
     where
         K: TryFrom<Vec<u8>>,
@@ -160,4 +186,32 @@ fn validate_dimension(w: u32, h: u32) -> Result<(), ImageError> {
     }
 
     Ok(())
+}
+
+pub struct EncodedImageReader(VecDeque<Bytes>);
+
+impl AsyncRead for EncodedImageReader {
+    fn poll_read(
+        mut self: std::pin::Pin<&mut Self>,
+        _: &mut std::task::Context<'_>,
+        buf: &mut tokio::io::ReadBuf<'_>,
+    ) -> std::task::Poll<std::io::Result<()>> {
+        if buf.remaining() == 0 {
+            return std::task::Poll::Ready(Ok(()));
+        }
+
+        let inner_buf = match self.0.front_mut() {
+            Some(c) => c,
+            None => return std::task::Poll::Ready(Ok(())),
+        };
+        let len = inner_buf.len().min(buf.remaining());
+        let to_put = inner_buf.split_to(len);
+        buf.put_slice(&to_put);
+
+        if inner_buf.is_empty() {
+            self.0.pop_front();
+        }
+
+        std::task::Poll::Ready(Ok(()))
+    }
 }

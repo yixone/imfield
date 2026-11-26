@@ -88,7 +88,7 @@ impl FileWriter {
         self.staged.abort().await
     }
 
-    pub fn bytes_written(&self) -> u64 {
+    pub fn size_bytes(&self) -> u64 {
         self.bytes_written
     }
 }
@@ -108,6 +108,11 @@ impl ForeignUploader {
     /// Returns the temporary path where the foreign writer should store data
     pub fn path(&self) -> &Path {
         &self.staged.temp_path
+    }
+
+    pub async fn size_bytes(&self) -> Result<u64, StorageError> {
+        let meta = tokio::fs::metadata(&self.staged.temp_path).await?;
+        Ok(meta.len())
     }
 
     /// Finishes the upload and commits the staged file

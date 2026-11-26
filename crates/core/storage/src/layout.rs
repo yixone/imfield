@@ -12,7 +12,7 @@ pub struct StorageLayout;
 
 impl StorageLayout {
     /// Returns the storage path for a media variant
-    pub fn media_path(id: FileId, variant: FileVariant) -> StoragePath {
+    pub fn media_path(id: &FileId, variant: FileVariant) -> StoragePath {
         StoragePath::new(MEDIA_DIR)
             .push(shard(id.to_string(), 2))
             .push(variant.as_str())

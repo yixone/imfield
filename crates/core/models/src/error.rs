@@ -13,6 +13,8 @@ pub enum DomainError {
     EntityDeleted,
     /// Error during data transition from the persistence layer
     PersistenceError,
+    BusyState,
+    Unsupported,
     /// Custom error
     Other(Box<dyn std::error::Error + Send + 'static>),
 }

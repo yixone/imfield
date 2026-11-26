@@ -4,6 +4,7 @@ pub enum ImageError {
     DimensionLimitExceeded,
 
     Io(std::io::Error),
+    WebpEncoderError,
     BackendError(image::ImageError),
 }
 

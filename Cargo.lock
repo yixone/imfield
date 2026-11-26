@@ -977,6 +977,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "imfield-di"
+version = "0.1.0"
+dependencies = [
+ "imfield-database",
+ "imfield-storage",
+]
+
+[[package]]
 name = "imfield-event-bus"
 version = "0.1.0"
 dependencies = [
@@ -988,8 +996,14 @@ name = "imfield-jobs"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "imfield-database",
+ "imfield-di",
  "imfield-jobs-core",
+ "imfield-media",
+ "imfield-mimetype",
  "imfield-models",
+ "imfield-storage",
+ "imfield-storage-address",
  "tokio",
  "tokio-util",
 ]
@@ -1003,6 +1017,19 @@ dependencies = [
  "imfield-snowflake",
  "tokio",
  "tokio-util",
+]
+
+[[package]]
+name = "imfield-media"
+version = "0.1.0"
+dependencies = [
+ "bytes",
+ "image",
+ "imfield-models",
+ "serde",
+ "serde_json",
+ "tokio",
+ "webp",
 ]
 
 [[package]]
@@ -1107,6 +1134,16 @@ name = "itoa"
 version = "1.0.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8f42a60cbdf9a97f5d2305f08a87dc4e09308d1276d28c869c684d7777685682"
+
+[[package]]
+name = "jobserver"
+version = "0.1.35"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1c00acbd29eabad4a2392fa0e921c874934dbbf4194312ad20f04a0ed67a3cb3"
+dependencies = [
+ "getrandom 0.4.3",
+ "libc",
+]
 
 [[package]]
 name = "js-sys"

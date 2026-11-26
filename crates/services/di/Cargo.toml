@@ -1,0 +1,10 @@
+[package]
+name = "imfield-di"
+version = "0.1.0"
+edition.workspace = true
+repository.workspace = true
+
+[dependencies]
+# --- Internal ---
+imfield-database.workspace = true
+imfield-storage.workspace = true

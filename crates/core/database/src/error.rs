@@ -1,5 +1,6 @@
 use imfield_models::DomainError;
 
+#[derive(Debug)]
 pub enum DatabaseError {
     InvalidPagination,
     Domain(DomainError),

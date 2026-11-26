@@ -100,6 +100,8 @@ pub enum AssetStateFailure {
     /// The asset's original file is unavailable in storage
     OriginalFileUnavailable,
 
+    UnsupportedFormat,
+
     /// Unknown or otherwise unclassified processing error
     ///
     /// See the logs for underlying details
