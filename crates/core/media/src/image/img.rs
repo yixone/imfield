@@ -3,7 +3,7 @@ use std::{collections::VecDeque, io::Cursor};
 use bytes::Bytes;
 use image::{DynamicImage, GenericImageView, ImageReader, Pixel};
 use imfield_models::types::media::{Color, ImageHash, ThumbHash};
-use tokio::io::{AsyncRead, AsyncReadExt, BufReader};
+use tokio::io::{AsyncRead, AsyncReadExt};
 
 use crate::image::{
     ImageError,

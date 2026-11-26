@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use imfield_database::ports::AssetsDatabaseExt;
+use imfield_database::{ports::AssetsDatabaseExt, types::query::Pagination};
 use imfield_media::{
     image::{EncodedImageReader, Image, ImageError, ImageFormat, ResizeFilter},
     video::{AudioMode, ExtractVideoFragmentParams, ResizeMode, VideoError},
@@ -15,7 +15,7 @@ use imfield_models::{
         sidecar::{SidecarData, SidecarType},
     },
     types::{
-        id::FileId,
+        id::{AssetId, FileId},
         media::{Color, ImageHash, ThumbHash},
     },
 };
@@ -31,32 +31,42 @@ pub async fn process_asset(
     ctx: &JobContext,
     cancel: CancellationToken,
 ) -> Result<(), JobError> {
-    // Retrieves an Asset by ID
-    let Some(asset) = ctx.data.db.assets.get(id).await? else {
-        return Ok(());
-    };
-
     // Calls processing for the asset
-    _process_asset(asset, ctx, cancel).await
+    _process_asset(id, ctx, &cancel).await
 }
 
-async fn _process_asset(
-    resource: AssetResource,
+pub async fn process_pending_assets_batch(
     ctx: &JobContext,
-    _cancel: CancellationToken,
+    cancel: CancellationToken,
 ) -> Result<(), JobError> {
-    // Setting the asset status to `processing`
-    let claimed = ctx
+    let mut handled = 0;
+
+    // Receives unprocessed assets
+    let unprocessed = ctx
         .data
         .db
         .assets
-        .try_start_processing(resource.asset.id())
-        .await?
-        .is_some();
+        .get_for_processing(Pagination::new(0, 50))
+        .await?;
 
-    if !claimed {
-        return Ok(());
+    // Triggers processing for all unprocessed assets
+    for asset in unprocessed {
+        _process_asset(asset, ctx, &cancel).await?;
+        handled += 1;
     }
+
+    Ok(())
+}
+
+async fn _process_asset(
+    id: AssetId,
+    ctx: &JobContext,
+    _cancel: &CancellationToken,
+) -> Result<(), JobError> {
+    // Retrieves an Asset by ID and setting the asset status to `processing`
+    let Some(resource) = ctx.data.db.assets.try_start_processing(id).await? else {
+        return Ok(());
+    };
 
     // Executes a processing pipeline suitable for the asset type
     let media_type = resource.files.file.mimekind();

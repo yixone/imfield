@@ -31,6 +31,11 @@ pub trait AssetsDatabase: Send + Sync {
         state: AssetState,
     ) -> Result<Vec<AssetId>, DatabaseError>;
 
+    async fn get_for_processing(
+        &self,
+        pagination: Pagination,
+    ) -> Result<Vec<AssetId>, DatabaseError>;
+
     async fn get_by_checksum(&self, c: &Sha256Checksum) -> Result<Option<Asset>, DatabaseError>;
 
     async fn get_by_parent_id(
@@ -75,6 +80,11 @@ pub trait AssetsDatabase: Send + Sync {
         id: AssetId,
         f: Box<DeleteFn<Asset>>,
     ) -> Result<(), DatabaseError>;
+
+    async fn try_start_processing(
+        &self,
+        id: AssetId,
+    ) -> Result<Option<AssetResource>, DatabaseError>;
 }
 
 #[async_trait::async_trait]
@@ -84,25 +94,6 @@ pub trait AssetsDatabaseExt: AssetsDatabase {
         Fn: FnOnce(&mut Asset) -> Result<(), DomainError> + Send + 'static,
     {
         self.update_fn_boxed(id, Box::new(f)).await
-    }
-
-    async fn try_start_processing(&self, id: AssetId) -> Result<Option<Asset>, DatabaseError> {
-        let res = self
-            .update_fn(id, move |a| {
-                if matches!(a.state(), AssetState::Processing) {
-                    return Err(DomainError::BusyState);
-                }
-
-                a.set_state(AssetState::Processing);
-                Ok(())
-            })
-            .await;
-
-        match res {
-            Ok(r) => Ok(Some(r)),
-            Err(DatabaseError::Domain(DomainError::BusyState)) => Ok(None),
-            Err(e) => Err(e),
-        }
     }
 
     async fn update_state(&self, id: AssetId, state: AssetState) -> Result<Asset, DatabaseError> {

@@ -1,3 +1,6 @@
+use std::time::Duration;
+
+use chrono::Utc;
 use imfield_models::{
     DomainError,
     entities::{
@@ -12,7 +15,7 @@ use crate::{
     DatabaseError,
     error::ToDatabaseError,
     impls::{queries, utils::hydrator::AssetHydrator},
-    ports::assets::AssetsDatabase,
+    ports::AssetsDatabase,
     schemas::assets::AssetRowMapper,
     types::{
         commands::{DeleteFn, UpdateFn},
@@ -247,6 +250,47 @@ impl AssetsDatabase for SqliteAssetsDatabase {
             ",
         )
         .bind(state.as_str())
+        .bind(pagination.limit() as i64)
+        .bind(pagination.try_offset()? as i64)
+        .fetch_all(&mut *conn)
+        .await
+        .to_db_error()?;
+
+        Ok(ids)
+    }
+
+    async fn get_for_processing(
+        &self,
+        pagination: Pagination,
+    ) -> Result<Vec<AssetId>, DatabaseError> {
+        if pagination.limit() == 0 {
+            return Ok(vec![]);
+        }
+
+        let mut conn = self.pool.acquire().await.to_db_error()?;
+
+        let ids = sqlx::query_scalar(
+            "
+            SELECT a.id FROM assets AS a
+            INNER JOIN assets_features AS af
+                ON af.id = a.id
+            WHERE 
+                a.deleted_at IS null
+                AND (
+                    -- The asset has not yet been processed
+                    a.state = 'pending'
+
+                    -- The asset was not processed due to an error or hang
+                    OR (
+                        a.state IN ('processing', 'failed')
+                        AND (unixepoch('now') - unixepoch(a.updated_at)) >= ?
+                    )
+                )
+            ORDER BY a.created_at ASC
+            LIMIT ? OFFSET ?
+            ",
+        )
+        .bind(Duration::from_mins(5).as_secs() as i64)
         .bind(pagination.limit() as i64)
         .bind(pagination.try_offset()? as i64)
         .fetch_all(&mut *conn)
@@ -570,5 +614,53 @@ impl AssetsDatabase for SqliteAssetsDatabase {
         tx.commit().await.to_db_error()?;
 
         Ok(())
+    }
+
+    async fn try_start_processing(
+        &self,
+        id: AssetId,
+    ) -> Result<Option<AssetResource>, DatabaseError> {
+        let mut tx = self.pool.begin().await.to_db_error()?;
+
+        let updated = sqlx::query(
+            "
+            UPDATE assets
+            SET 
+                state = ?, updated_at = ?
+            WHERE id = ? AND state != ?
+            ",
+        )
+        .bind(AssetState::Processing.as_str())
+        .bind(Some(Utc::now()))
+        .bind(id)
+        .bind(AssetState::Processing.as_str())
+        .execute(&mut *tx)
+        .await
+        .to_db_error()?;
+
+        if updated.rows_affected() == 0 {
+            tx.rollback().await.to_db_error()?;
+            return Ok(None);
+        }
+
+        let asset = sqlx::query_as(
+            "
+            SELECT * FROM assets
+            WHERE id = ?
+            ",
+        )
+        .bind(id)
+        .fetch_one(&mut *tx)
+        .await
+        .to_db_error()?;
+
+        let a = AssetHydrator::hydrate_asset_resource_many(vec![asset], &mut tx)
+            .await?
+            .into_iter()
+            .next();
+
+        tx.commit().await.to_db_error()?;
+
+        Ok(a)
     }
 }

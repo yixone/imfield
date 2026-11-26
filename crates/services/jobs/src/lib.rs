@@ -16,6 +16,8 @@ const MAX_RETRIES: u32 = 16;
 #[derive(Debug)]
 pub enum JobV1 {
     ProcessAsset { id: AssetId },
+
+    ProcessPendingAssetsBatch,
 }
 
 #[async_trait::async_trait]
@@ -27,6 +29,7 @@ impl ExecutableJob for JobV1 {
     fn name(&self) -> &'static str {
         match self {
             JobV1::ProcessAsset { .. } => "job.asset.process",
+            JobV1::ProcessPendingAssetsBatch => "job.asset.process.batch",
         }
     }
 
@@ -45,6 +48,9 @@ impl ExecutableJob for JobV1 {
     ) -> Result<(), Self::Error> {
         match self {
             JobV1::ProcessAsset { id } => commands::process_asset(*id, ctx, cancel).await,
+            JobV1::ProcessPendingAssetsBatch => {
+                commands::process_pending_assets_batch(ctx, cancel).await
+            }
         }
     }
 }
