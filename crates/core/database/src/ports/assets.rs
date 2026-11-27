@@ -1,3 +1,4 @@
+use chrono::Duration;
 use imfield_models::{
     DomainError,
     entities::{
@@ -37,6 +38,12 @@ pub trait AssetsDatabase: Send + Sync {
     ) -> Result<Vec<AssetId>, DatabaseError>;
 
     async fn get_by_checksum(&self, c: &Sha256Checksum) -> Result<Option<Asset>, DatabaseError>;
+
+    async fn get_deleted_older(
+        &self,
+        older: Duration,
+        pagination: Pagination,
+    ) -> Result<Vec<AssetId>, DatabaseError>;
 
     async fn get_by_parent_id(
         &self,

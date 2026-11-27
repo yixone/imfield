@@ -300,6 +300,37 @@ impl AssetsDatabase for SqliteAssetsDatabase {
         Ok(ids)
     }
 
+    async fn get_deleted_older(
+        &self,
+        older: chrono::Duration,
+        pagination: Pagination,
+    ) -> Result<Vec<AssetId>, DatabaseError> {
+        if pagination.limit() == 0 {
+            return Ok(vec![]);
+        }
+
+        let mut conn = self.pool.acquire().await.to_db_error()?;
+
+        let ids = sqlx::query_scalar(
+            "
+            SELECT a.id FROM assets AS a
+            WHERE 
+                a.deleted_at IS NOT null
+                AND unixepoch('now') - unixepoch(a.updated_at)) >= ?
+            ORDER BY a.deleted_at ASC
+            LIMIT ? OFFSET ?
+            ",
+        )
+        .bind(older.num_seconds())
+        .bind(pagination.limit() as i64)
+        .bind(pagination.try_offset()? as i64)
+        .fetch_all(&mut *conn)
+        .await
+        .to_db_error()?;
+
+        Ok(ids)
+    }
+
     async fn get_by_checksum(&self, c: &Sha256Checksum) -> Result<Option<Asset>, DatabaseError> {
         let mut conn = self.pool.acquire().await.to_db_error()?;
 

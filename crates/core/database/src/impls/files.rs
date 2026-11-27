@@ -11,7 +11,10 @@ use crate::{
     impls::{queries, utils::hydrator::FileHydrator},
     ports::files::FilesDatabase,
     schemas::files::FileRowMapper,
-    types::commands::{DeleteFn, UpdateFn},
+    types::{
+        commands::{DeleteFn, UpdateFn},
+        query::Pagination,
+    },
 };
 
 pub struct SqliteFilesDatabase {
@@ -198,5 +201,26 @@ impl FilesDatabase for SqliteFilesDatabase {
         tx.commit().await.to_db_error()?;
 
         Ok(())
+    }
+
+    async fn get_unused(&self, pagination: Pagination) -> Result<Vec<FileId>, DatabaseError> {
+        let mut conn = self.pool.acquire().await.to_db_error()?;
+
+        let ids = sqlx::query_scalar(
+            "
+            SELECT f.id FROM files AS f
+            LEFT JOIN assets AS a ON a.file_id = f.id
+            GROUP BY f.id
+            HAVING COUNT(a.id) = 0
+            LIMIT ? OFFSET ?
+            ",
+        )
+        .bind(pagination.limit() as i64)
+        .bind(pagination.try_offset()? as i64)
+        .fetch_all(&mut *conn)
+        .await
+        .to_db_error()?;
+
+        Ok(ids)
     }
 }

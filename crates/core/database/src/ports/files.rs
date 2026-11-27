@@ -6,7 +6,10 @@ use imfield_models::{
 
 use crate::{
     DatabaseError,
-    types::commands::{DeleteFn, UpdateFn},
+    types::{
+        commands::{DeleteFn, UpdateFn},
+        query::Pagination,
+    },
 };
 
 #[async_trait::async_trait]
@@ -53,6 +56,8 @@ pub trait FilesDatabase: Send + Sync {
         self.delete_sidecar_fn_boxed(id, ty, Box::new(|_| Ok(())))
             .await
     }
+
+    async fn get_unused(&self, pagination: Pagination) -> Result<Vec<FileId>, DatabaseError>;
 }
 
 #[async_trait::async_trait]

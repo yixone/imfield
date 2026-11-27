@@ -13,11 +13,23 @@ mod error;
 
 const MAX_RETRIES: u32 = 16;
 
+pub struct JobContext {
+    pub video: Option<Arc<VideoContext>>,
+    pub data: Arc<DataContext>,
+}
+
+pub struct VideoContext {
+    pub ffmpeg: FFmpeg,
+    pub ffprobe: FFprobe,
+}
+
 #[derive(Debug)]
 pub enum JobV1 {
     ProcessAsset { id: AssetId },
+    ProcessAssetsBatch,
 
-    ProcessPendingAssetsBatch,
+    CleanupDeletedAssets,
+    CleanupFiles,
 }
 
 #[async_trait::async_trait]
@@ -28,8 +40,10 @@ impl ExecutableJob for JobV1 {
 
     fn name(&self) -> &'static str {
         match self {
-            JobV1::ProcessAsset { .. } => "job.asset.process",
-            JobV1::ProcessPendingAssetsBatch => "job.asset.process.batch",
+            JobV1::ProcessAsset { .. } => "job.assets.process_by_id",
+            JobV1::ProcessAssetsBatch => "job.assets.process_batch",
+            JobV1::CleanupDeletedAssets => "job.assets.cleanup",
+            JobV1::CleanupFiles => "job.files.cleanup",
         }
     }
 
@@ -48,19 +62,11 @@ impl ExecutableJob for JobV1 {
     ) -> Result<(), Self::Error> {
         match self {
             JobV1::ProcessAsset { id } => commands::process_asset(*id, ctx, cancel).await,
-            JobV1::ProcessPendingAssetsBatch => {
-                commands::process_pending_assets_batch(ctx, cancel).await
-            }
+            JobV1::ProcessAssetsBatch => commands::process_pending_assets_batch(ctx, cancel).await,
+
+            // TODO!
+            JobV1::CleanupDeletedAssets => Ok(()),
+            JobV1::CleanupFiles => Ok(()),
         }
     }
-}
-
-pub struct VideoContext {
-    pub ffmpeg: FFmpeg,
-    pub ffprobe: FFprobe,
-}
-
-pub struct JobContext {
-    pub video: Option<Arc<VideoContext>>,
-    pub data: Arc<DataContext>,
 }

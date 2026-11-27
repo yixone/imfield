@@ -39,8 +39,6 @@ pub async fn process_pending_assets_batch(
     ctx: &JobContext,
     cancel: CancellationToken,
 ) -> Result<(), JobError> {
-    let mut handled = 0;
-
     // Receives unprocessed assets
     let unprocessed = ctx
         .data
@@ -52,7 +50,6 @@ pub async fn process_pending_assets_batch(
     // Triggers processing for all unprocessed assets
     for asset in unprocessed {
         _process_asset(asset, ctx, &cancel).await?;
-        handled += 1;
     }
 
     Ok(())
